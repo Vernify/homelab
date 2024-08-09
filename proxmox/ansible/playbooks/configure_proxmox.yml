@@ -1,0 +1,10 @@
+- name: Configure Proxmox Cluster
+  #hosts: pve03
+  hosts: all
+  gather_facts: yes
+  vars_files:
+    - ../vault/secrets.yml
+  roles:
+    - ../roles/base
+    - ../roles/establish_cluster
+

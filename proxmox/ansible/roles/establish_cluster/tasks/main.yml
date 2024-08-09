@@ -1,0 +1,25 @@
+- name: Ensure all hosts are in the /etc/hosts file
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ hostvars[item].ansible_host }} {{ item }}"
+    state: present
+  loop: "{{ groups['all'] }}"
+
+- name: Check if the cluster already exists
+  command: pvecm status
+  register: cluster_status
+  ignore_errors: yes
+
+- name: Create Proxmox cluster
+  command: pvecm create vernify-pve
+  when: inventory_hostname == groups['all'][0] and cluster_status.rc != 0
+
+# Due to some changes, this needs to be reworked
+#- name: Wait for the cluster to be ready
+#  pause:
+#    seconds: 30
+#  when: inventory_hostname == groups['all'][0] and cluster_status.rc != 0
+#
+#- name: Join nodes to the cluster
+#  command: pvecm add {{ hostvars[groups['all'][0]].ansible_host }} -password {{ cluster_password }}
+#  when: inventory_hostname != groups['all'][0] and cluster_status.rc != 0

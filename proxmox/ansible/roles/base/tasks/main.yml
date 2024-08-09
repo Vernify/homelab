@@ -1,0 +1,29 @@
+- name: Disable enterprise repos
+  command: sed -i '/^deb https:\/\/enterprise.proxmox.com/s/^deb/#deb/' /etc/apt/sources.list.d/pve-enterprise.list
+
+- name: Disable enterprise ceph repos
+  command: sed -i '/^deb https:\/\/enterprise.proxmox.com/s/^deb/#deb/' /etc/apt/sources.list.d/ceph.list
+
+- name: Add no-subscription and Debian repos
+  template:
+    src: proxmox_repo.j2
+    dest: /etc/apt/sources.list
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Update all packages
+  apt:
+    upgrade: dist
+
+- name: Ensure necessary packages are installed
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - vim
+    

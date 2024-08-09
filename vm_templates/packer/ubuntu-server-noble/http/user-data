@@ -1,0 +1,36 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US
+  keyboard:
+    layout: us
+  updates: security
+  apt:
+    disable_suites: [security]
+  ssh:
+    install-server: true
+    allow-pw: true
+    disable_root: true
+    ssh_quiet_keygen: true
+    allow_public_ssh_keys: true
+  packages:
+    - qemu-guest-agent
+    - sudo
+  storage:
+    layout:
+      name: direct
+    swap:
+      size: 0
+  user-data:
+    package_upgrade: false
+    timezone: Pacific/Auckland
+    users:
+      - name: werner
+        groups: [adm, sudo]
+        lock-passwd: true
+        passwd: $6$MRAEQpG5HW7W1l6z$e/V0J7Q/aMTz2m.3q3RUyMuLnChm6X68IvGkPRKSqViKuSdPAG2sdRhPG1HY5MWGIdd3aKZDGwoA/mMk70QBs/
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash
+        ssh_authorized_keys:
+          - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDeW4IbhjfdhAUmCZkIR7CazvI9kkEe8hauTMmf//2gzkWHqGfUfXxMbDCJAVtxtPzxCFNt7JEHvzYcvpCp/MFNBaNyAOk50+F5Gg9uaLww4AkgOgrLn8jI4FK6C+qjS7chf1pRrv3OZv2YUFiCYwOZcIqfR3FkGIfqAGxPlPLYxdym/xM2UOO6Ynw3BCGxxj/WR1L4zNymIj6h98ZjhlGX22sehgXsJNVSLKHdRD52iwB9GQDcrBRXfCAPM8Z8FZ2d56Bv4srRX+8ivi/2wnEUct0LQcYqAMBvLOAVlzKchfOjj8w3Aps0pDRrdTUqHUbou1QUBDKVhCHyZN9GcEM/ werner@werner-linux.ics.dmz
+
