@@ -1,0 +1,8 @@
+# Playbook to ensure that the hosts are reachable
+- name: Test Connectivity
+  hosts: all
+  tasks:
+    - name: Ping all hosts
+      ping:
+
+      

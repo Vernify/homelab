@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+deb http://ftp.nz.debian.org/debian {{ ansible_distribution_release }} main contrib
+
+deb http://ftp.nz.debian.org/debian {{ ansible_distribution_release }}-updates main contrib
+
+# security updates
+deb http://security.debian.org {{ ansible_distribution_release }}-security main contrib
+
+deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription
