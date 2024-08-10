@@ -1,78 +1,89 @@
-#- name: GET ACME Accounts
-#  uri:
-#    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/account
-#    method: GET
-#    headers:
-#      CSRFPreventionToken: "{{ proxmox_csrf }}"
-#      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
-#    validate_certs: no
-#  register: acme_accounts
-#  delegate_to: localhost
-#  run_once: yes
 #
-#- name: Create ACME Account
-#  uri:
-#    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/account
-#    method: POST
-#    headers:
-#      CSRFPreventionToken: "{{ proxmox_csrf }}"
-#      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
-#      Content-Type: "application/json"
-#    validate_certs: no
-#    body: >
-#      {
-#        "contact": "{{ cloudflare_email }}",
-#        "name": "Cloudflare-dns",
-#        "tos_url": "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf",
-#      }
-#    body_format: json
-#  delegate_to: localhost
-#  run_once: yes
-#  when: acme_accounts.json.data | selectattr('name', 'equalto', 'Cloudflare-dns' ) | list | length == 0
+# Datacenter ACME account
 #
-#- name: List DNS Challenges
-#  uri:
-#    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/plugins
-#    method: GET
-#    headers:
-#      CSRFPreventionToken: "{{ proxmox_csrf }}"
-#      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
-#    validate_certs: no
-#  register: dns_challenges
-#  delegate_to: localhost
-#  run_once: yes
-#
-#- name: Create JSON data
-#  set_fact:
-#    dns_data: "CF_Email={{ cloudflare_email }}\nCF_Token={{ cloudflare_api_key }}\n"
-#  delegate_to: localhost
-#  run_once: yes
-#
-#- name: Encode JSON data in base64
-#  set_fact:
-#    encoded_dns_data: "{{ dns_data | b64encode }}"
-#  delegate_to: localhost
-#  run_once: yes
-#
-#- name: Create DNS Challenge
-#  uri:
-#    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/plugins
-#    method: POST
-#    headers:
-#      CSRFPreventionToken: "{{ proxmox_csrf }}"
-#      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
-#      Content-Type: "application/json"
-#    validate_certs: no
-#    body:
-#      id: "Cloudflare"
-#      type: "dns"
-#      api: "cf"
-#      data: "{{ encoded_dns_data }}"
-#    body_format: json
-#  delegate_to: localhost
-#  run_once: yes
-#  when: dns_challenges.json.data | selectattr('api', 'defined') | selectattr('api', 'equalto', 'cf') | list | length == 0
+- name: GET ACME Accounts
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/account
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+    validate_certs: no
+  register: acme_accounts
+  delegate_to: localhost
+  run_once: yes
 
+- name: Create ACME Account
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/account
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    # https://acme-v02.api.letsencrypt.org/directory
+    body: >
+      {
+        "contact": "{{ cloudflare_email }}",
+        "name": "Cloudflare-dns",
+        "directory": "https://acme-staging-v02.api.letsencrypt.org/directory",
+        "tos_url": "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf",
+      }
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  when: acme_accounts.json.data | selectattr('name', 'equalto', 'Cloudflare-dns' ) | list | length == 0
+
+# 
+# Datacenter ACME challenge plugin
+#
+- name: List DNS Challenges
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/plugins
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+    validate_certs: no
+  register: dns_challenges
+  delegate_to: localhost
+  run_once: yes
+
+- name: Create JSON data
+  set_fact:
+    dns_data: "CF_Email={{ cloudflare_email }}\nCF_Token={{ cloudflare_api_key }}\n"
+  delegate_to: localhost
+  run_once: yes
+
+- name: Encode JSON data in base64
+  set_fact:
+    encoded_dns_data: "{{ dns_data | b64encode }}"
+  delegate_to: localhost
+  run_once: yes
+
+- name: Create DNS Challenge
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/acme/plugins
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    body:
+      id: "Cloudflare"
+      type: "dns"
+      api: "cf"
+      data: "{{ encoded_dns_data }}"
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  when: dns_challenges.json.data | selectattr('api', 'defined') | selectattr('api', 'equalto', 'cf') | list | length == 0
+
+#
+# Node ACME certificate domain
+#
 - name: GET node cert config
   uri:
     url: https://{{ primary_node }}:8006/api2/json/nodes/{{ inventory_hostname }}/config
@@ -82,11 +93,6 @@
       Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
     validate_certs: no
   register: node_cert_config
-  delegate_to: localhost
-
-- name: Print node cert config
-  debug:
-    var: node_cert_config
   delegate_to: localhost
 
 - name: Register certificate domain
@@ -104,8 +110,26 @@
       acmedomain0: "{{ inventory_hostname }}.{{ ansible_domain }},plugin=Cloudflare"
     body_format: json
   when: node_cert_config.json.data is not defined or
-      (node_cert_config.json.data.acme is not defined or
-       node_cert_config.json.data.acme | selectattr('acme', 'equalto', 'account=Cloudflare-dns') | list | length == 0)
+      node_cert_config.json.data.acmedomain0 is not defined 
+  delegate_to: localhost
+
+#
+# Order the certificate
+#
+- name: GET certificate info
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/nodes/{{ inventory_hostname }}/certificates/info
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+    validate_certs: no
+  register: certificate_info
+  delegate_to: localhost
+
+- name: Debug certificate info
+  debug:
+    var: certificate_info
   delegate_to: localhost
 
 - name: Order a cert from Let's Encrypt
@@ -121,21 +145,7 @@
       {
         "node": "{{ inventory_hostname }}"
       }
+    body_format: json
   delegate_to: localhost
-
-
-#- name: GET certificate info
-#  uri:
-#    url: https://{{ primary_node }}:8006/api2/json/nodes/{{ inventory_hostname }}/certificates/info
-#    method: GET
-#    headers:
-#      CSRFPreventionToken: "{{ proxmox_csrf }}"
-#      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
-#    validate_certs: no
-#  register: certificate_info
-#  delegate_to: localhost
-#
-#- name: Print certificate info
-#  debug:
-#    var: certificate_info
-#  delegate_to: localhost
+  when: certificate_info.json.data | selectattr('filename', 'search', 'pveproxy-ssl.pem') | list | length == 0
+  
