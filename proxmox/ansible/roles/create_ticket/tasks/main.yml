@@ -16,7 +16,7 @@
 
 - name: Generate Proxmox ticket
   uri:
-    url: https://192.168.20.15:8006/api2/json/access/ticket
+    url: https://{{ primary_node }}:8006/api2/json/access/ticket
     method: POST
     body_format: form-urlencoded
     body:
@@ -54,7 +54,7 @@
 
 - name: List created tickets
   uri:
-    url: https://192.168.20.15:8006/api2/json/access/ticket
+    url: https://{{ primary_node }}:8006/api2/json/access/ticket
     method: GET
     headers:
       CSRFPreventionToken: "{{ proxmox_csrf }}"
