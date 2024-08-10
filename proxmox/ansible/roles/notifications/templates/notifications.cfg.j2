@@ -1,0 +1,16 @@
+smtp: Gmail
+        from-address: {{ ansible_fqdn }}
+        mailto-user root@pam
+        mode tls
+        port 465
+        server smtp.gmail.com
+        username {{ gmail_username}}
+
+sendmail: mail-to-root
+        comment Send mails to root@pam's email address
+        mailto-user root@pam
+
+matcher: default-matcher
+        comment Route all notifications to mail-to-root
+        mode all
+        target Gmail

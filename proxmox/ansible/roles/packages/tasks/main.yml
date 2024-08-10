@@ -4,6 +4,11 @@
 - name: Disable enterprise ceph repos
   command: sed -i '/^deb https:\/\/enterprise.proxmox.com/s/^deb/#deb/' /etc/apt/sources.list.d/ceph.list
 
+- name: Ensure the no-subscription line is in the ceph.list file
+  lineinfile:
+    path: /etc/apt/sources.list.d/ceph.list
+    line: "deb http://download.proxmox.com/debian/ceph-reef {{ ansible_distribution_release }} no-subscription"
+
 - name: Add no-subscription and Debian repos
   template:
     src: proxmox_repo.j2

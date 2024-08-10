@@ -1,2 +1,2 @@
-# General variables for all hosts
-cluster_name: vernify-pve
+---
+cluster_name: "vernify-pve"

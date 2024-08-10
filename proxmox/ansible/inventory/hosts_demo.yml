@@ -1,0 +1,10 @@
+# Considering the cluster being built will host all internal DNS, we have to use IP addresses instead of hostnames
+all:
+  hosts:
+    pve15:
+      ansible_host: 192.168.20.15
+    pve16:
+      ansible_host: 192.168.20.16
+  vars:
+    ansible_user: root
+    primary_node: 192.168.20.15
