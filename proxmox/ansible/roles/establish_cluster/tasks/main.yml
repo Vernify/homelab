@@ -9,14 +9,14 @@
   file:
     path: /tmp/auth_keys
     state: directory
-  run_once: true  # Ensure this task runs only once on the control node
+  run_once: true 
 
 - name: Fetch SSH public keys from all nodes
   fetch:
     src: /root/.ssh/id_rsa.pub
     dest: /tmp/auth_keys/{{ inventory_hostname }}_id_rsa.pub
     flat: yes
-  run_once: false  # Ensure this task runs on all nodes
+  run_once: false 
 
 - name: Debug fetched files on the control node
   command: ls -l /tmp/auth_keys/
@@ -88,3 +88,11 @@
 - name: Join nodes to the cluster
   command: pvecm add {{ primary_node }} -votes 0 -use_ssh
   when: inventory_hostname != groups['all'][0] and cluster_status.rc != 0
+
+- name: Delete the /tmp/auth_keys directory
+  file:
+    path: /tmp/auth_keys
+    state: absent
+  run_once: true
+  delegate_to: localhost
+
