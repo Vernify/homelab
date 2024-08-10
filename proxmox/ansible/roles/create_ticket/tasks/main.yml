@@ -1,0 +1,71 @@
+- name: Set username as fact
+  set_fact:
+    proxmox_username: root@pam
+  delegate_to: localhost
+  run_once: yes
+
+- name: Write cluster password to file
+  copy:
+    content: "{{ cluster_password }}"
+    dest: /root/.proxmox_password
+    owner: root
+    group: root
+    mode: '0600'
+  delegate_to: localhost
+  run_once: yes
+
+- name: Generate Proxmox ticket
+  uri:
+    url: https://192.168.20.15:8006/api2/json/access/ticket
+    method: POST
+    body_format: form-urlencoded
+    body:
+      username: "{{ proxmox_username }}"
+      password: "{{ lookup('file', '/root/.proxmox_password') }}"
+    validate_certs: no
+  register: ticket
+  delegate_to: localhost
+  run_once: yes
+
+- name: Print time when ticket expires
+  debug:
+    var: ticket.date
+  delegate_to: localhost
+  run_once: yes
+
+- name: Set ticket as fact
+  set_fact:
+    proxmox_ticket: "{{ ticket.json.data.ticket }}"
+  delegate_to: localhost
+  run_once: yes
+
+- name: Set CSRF token as fact
+  set_fact:
+    proxmox_csrf: "{{ ticket.json.data.CSRFPreventionToken }}"
+  delegate_to: localhost
+  run_once: yes
+
+- name: Delete cluster password file
+  file:
+    path: /root/.proxmox_password
+    state: absent
+  delegate_to: localhost
+  run_once: yes
+
+- name: List created tickets
+  uri:
+    url: https://192.168.20.15:8006/api2/json/access/ticket
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+    validate_certs: no
+  register: ticket_check
+  delegate_to: localhost
+  run_once: yes
+
+- name: Print created tickets
+  debug:
+    var: ticket_check.expires
+  delegate_to: localhost
+  run_once: yes

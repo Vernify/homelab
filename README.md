@@ -2,16 +2,24 @@
 This is a place where I put my notes as I learn how to do things better,
 feel free to use this code in any (kind) manner, but please do be very careful before using it in any production implementation. Learning takes favour over security as I learn.
 
-# Lab Layout
-I recently called it on my love for VMWare. For the last 10 years, I have been a staunch supporter of vSphere, running a full HA stack in my home lab.
-Largely because I work in enterprise, and that has always been the hypervisor of choice. I have just recently gave in, and will re-provision my entire home lab over onto Proxmox, and use the opportunity to get rid of a few manual steps.
+I recently called it on my love for VMWare. For the past 10-15 years, I have been a staunch supporter of vSphere, running a full HA stack in my home lab for the past 10 years.
+This also largely because I work in enterprise environments, and that has always been the hypervisor of choice. I have just recently decided to pivot, and will re-provision my entire home lab over onto Proxmox, and use the opportunity to get rid of a few manual steps that have plagued me in my setup.
 
-5 HA Proxmox hypervisors, with shared storage provided through Ceph and a NFS mount.
+# Lab Layout
+Compute are provided through 5 HA Proxmox hypervisors, with shared storage provided by Ceph and a NFS export.
 
 # Credits
 All the heavy lifting in this repo has been done by others. Most notably on the work and references by Techno Tim and Christian Lempa. 
 
 # The Lab:
+Code reviewed since Aug 2024.
+
+## Provisioning container
+I wanted to start off with provisioning through a known container, to aid not polluting my system, but also to be able to re-provision at any time, from any device, without having to worry about dependencies.
+
+* Provisioning and management container(s)
+  * [Terraform]
+  * [Ansible]
 
 ## Platform
 * [Proxmox] - Hypervisor layer
@@ -21,10 +29,12 @@ All the heavy lifting in this repo has been done by others. Most notably on the 
 * [Packer] templates
   * [VMs](https://github.com/Vernify/homelab/tree/main/vm_templates/packer/)
 * Distributed storage
+
+
+## Code to be reviewed and added:
+
+## Platform
   * [Longhorn] (if not sticking with Ceph)
-* Provisioning and management container(s)
-  * [Terraform]
-  * [Ansible]
 * [K3S] container platform
   * [Traefik]
   * [Lets Encrypt]

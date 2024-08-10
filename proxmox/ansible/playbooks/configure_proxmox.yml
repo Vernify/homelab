@@ -5,6 +5,8 @@
   vars_files:
     - ../vault/secrets.yml
   roles:
-    - ../roles/base
-    - ../roles/establish_cluster
+    #- ../roles/packages
+    #- ../roles/establish_cluster
+    - ../roles/create_ticket
+    - ../roles/notifications  # Due to the cluster fs being protected, this will fail
 

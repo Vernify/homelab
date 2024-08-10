@@ -1,6 +1,26 @@
 ---
+# The following subnets are referenced and used:
+#                      |
+#                   MetalLB:
+#         192.168.75.80-192.168.75.90
+#                      |
+#             API Server Endpoint:
+#               192.168.75.222 
+#
+# Cluster Pod CIDR Pool: 10.52.0.0/16
+# Cilium Load Balancer CIDR: 192.168.31.0/24
+# Kube-VIP BGP Peer Address: 192.168.75.1
+
+# This setup allows for flexible networking configurations using Flannel, Calico, or Cilium 
+# as the Container Network Interface (CNI). The choice of CNI can be toggled by uncommenting 
+# the respective interface variables.
+# Flannel: Default CNI, using eth0 as the interface.
+# Calico: Optionally enabled with eBPF support and specific version tagging.
+# Cilium: Provides advanced features like native routing, BGP control plane, and Hubble observability.
+
 k3s_version: v1.30.2+k3s2
-# this is the user that has ssh access to these machines
+
+# this is the user that has passwordless ssh access to the target nodes.
 ansible_user: werner
 systemd_dir: /etc/systemd/system
 
