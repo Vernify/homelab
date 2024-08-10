@@ -49,12 +49,6 @@
   delegate_to: localhost
   run_once: yes
 
-- name: Print notification matchers
-  debug:
-    var: notification_matchers
-  delegate_to: localhost
-  run_once: yes
-
 - name: Create notification matcher
   uri:
     url: https://{{ primary_node }}:8006/api2/json/cluster/notifications/matchers

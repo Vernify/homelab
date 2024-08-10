@@ -2,14 +2,15 @@
   #hosts: pve03
   hosts: all
   gather_facts: yes
-  vars_files:
-    - ../vault/secrets.yml
   vars:
     primary_node: "{{ hostvars[groups['all'][0]].ansible_host }}"
+  vars_files:
+    - ../vault/secrets.yml
 
   roles:
-    #- ../roles/packages
-    #- ../roles/establish_cluster
+    - ../roles/packages
+    - ../roles/establish_cluster
     - ../roles/create_ticket
-    - ../roles/notifications  # Due to the cluster fs being protected, this will fail
+    - ../roles/notifications
+    - ../roles/certificates
 
