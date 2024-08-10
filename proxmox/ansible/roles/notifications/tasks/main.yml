@@ -1,7 +1,7 @@
 ---
-- name: List notification targets
+- name: GET notification targets
   uri:
-    url: https://192.168.20.15:8006/api2/json/cluster/notifications/endpoints/smtp
+    url: https://{{ primary_node }}:8006/api2/json/cluster/notifications/endpoints/smtp
     method: GET
     headers:
       CSRFPreventionToken: "{{ proxmox_csrf }}"
@@ -11,54 +11,67 @@
   delegate_to: localhost
   run_once: yes
 
-- name: Print notification targets
-  debug:
-    var: notification_targets
+- name: Create GMail endpoint
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/notifications/endpoints/smtp
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    body: >
+      {
+        "from-address": "proxmox.{{ cluster_name }}@{{ ansible_domain }}",
+        "name": "Gmail",
+        "server": "smtp.gmail.com",
+        "mailto": "{{ to_address }}",
+        "mailto-user": "root@pam",
+        "mode": "tls",
+        "password": "{{ gmail_app_password }}",
+        "port": 465,
+        "username": "{{ gmail_username }}"
+      }
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  when: notification_targets.json.data | selectattr('name', 'equalto', 'Gmail') | list | length == 0
+
+- name: GET notification matcher
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/notifications/matchers
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+    validate_certs: no
+  register: notification_matchers
   delegate_to: localhost
   run_once: yes
 
+- name: Print notification matchers
+  debug:
+    var: notification_matchers
+  delegate_to: localhost
+  run_once: yes
 
-#- name: Get SMTP endpoint
-#  uri:
-#    url: "https://192.168.20.15:8006/api2/json/cluster/notifications/endpoints/smtp"
-#    method: GET
-#    headers:
-#      Authorization: "PVEAPIToken=root@pam!test_token=aca1476e-07ba-4d44-8e60-c07c09a34bda"
-#      Content-Type: "application/json"
-#    validate_certs: no
-#  register: smtp_endpoint
-#  delegate_to: localhost
-#
-#- name: Print SMTP endpoint
-#  debug:
-#    var: smtp_endpoint
-
-    #body: >
-    #  {
-    #    "id": "smtp_endpoint",
-    #    "server": "smtp.example.com",
-    #    "port": 587,
-    #    "user": "your_smtp_user",
-    #    "password": "your_smtp_password",
-    #    "from": "your_email@example.com",
-    #    "secure": "starttls"
-    #  }
-    #body_format: json
-
-#- name: Create notifications.cfg file
-#  template:
-#    src: notifications.cfg.j2
-#    dest: /etc/pve/notifications.cfg
-#    owner: root
-#    group: www-data
-#    mode: '0644'
-#  when: inventory_hostname == groups['all'][0]
-#
-#- name: Create priv/notifications.cfg file
-#  template:
-#    src: priv_notifications.cfg.j2
-#    dest: /etc/pve/priv/notifications.cfg
-#    owner: root
-#    group: www-data
-#    mode: '0600'
-#  when: inventory_hostname == groups['all'][0]
+- name: Create notification matcher
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/notifications/matchers
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    body: >
+      {
+        "name": "Gmail-matcher",
+        "comment": "Send all notifications to Gmail",
+        "mode": "all",
+        "target": [ "Gmail" ]
+      }
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  when: notification_matchers.json.data | selectattr('name', 'equalto', 'Gmail-matcher') | list | length == 0

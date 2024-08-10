@@ -4,6 +4,9 @@
   gather_facts: yes
   vars_files:
     - ../vault/secrets.yml
+  vars:
+    primary_node: "{{ hostvars[groups['all'][0]].ansible_host }}"
+
   roles:
     #- ../roles/packages
     #- ../roles/establish_cluster
