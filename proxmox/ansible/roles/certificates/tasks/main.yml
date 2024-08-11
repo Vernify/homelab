@@ -127,11 +127,6 @@
   register: certificate_info
   delegate_to: localhost
 
-- name: Debug certificate info
-  debug:
-    var: certificate_info
-  delegate_to: localhost
-
 - name: Order a cert from Let's Encrypt
   uri:
     url: https://{{ primary_node }}:8006/api2/json/nodes/{{ inventory_hostname }}/certificates/acme/certificate
@@ -148,4 +143,3 @@
     body_format: json
   delegate_to: localhost
   when: certificate_info.json.data | selectattr('filename', 'search', 'pveproxy-ssl.pem') | list | length == 0
-  

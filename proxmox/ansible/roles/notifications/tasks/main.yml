@@ -69,3 +69,15 @@
   delegate_to: localhost
   run_once: yes
   when: notification_matchers.json.data | selectattr('name', 'equalto', 'Gmail-matcher') | list | length == 0
+
+- name: Send a test notification
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/cluster/notifications/targets/Gmail/test
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+    validate_certs: no
+  delegate_to: localhost
+  run_once: yes
+  

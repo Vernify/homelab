@@ -1,2 +1,27 @@
 ---
+# General settings
 cluster_name: "vernify-pve"
+
+# LXC Images to seed on nodes
+lxc_images: 
+  - "alpine-3.19-default_20240207_amd64.tar.xz"
+  - "centos-9-stream-default_20221109_amd64.tar.xz"
+  - "ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+  - "ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
+lxc_storage: "local"
+
+# Name of VM Images to seed on nodes (set by Packer)
+vm_template_names:
+  - name: ubuntu-2404-template
+    packer_directory: /homelab/vm_templates/packer/ubuntu-server-noble
+
+# ISO Storage Location
+pool: "local"
+iso_images:
+  - name: "ubuntu-22.04.4-live-server-amd64.iso"
+    url: "https://releases.ubuntu.com/22.04/ubuntu-22.04.4-live-server-amd64.iso"
+  - name: "ubuntu-24.04-live-server-amd64.iso"
+    url: "https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso"
+  - name: "CentOS-7-x86_64-Minimal-1609-99.iso"
+    url: "https://buildlogs.centos.org/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1609-99.iso"
+

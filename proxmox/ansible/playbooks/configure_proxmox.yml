@@ -1,5 +1,4 @@
 - name: Configure Proxmox Cluster
-  #hosts: pve03
   hosts: all
   gather_facts: yes
   vars:
@@ -8,9 +7,13 @@
     - ../vault/secrets.yml
 
   roles:
-    - ../roles/packages
-    - ../roles/establish_cluster
-    - ../roles/create_ticket
-    - ../roles/notifications
-    - ../roles/certificates
+    - ../roles/packages                  # Remove enterprise repos, and install common packages
+    - ../roles/establish_cluster         # Initialize first node as master, and join others to cluster
+    - ../roles/create_ticket             # Create a ticket for the cluster for API authentication
+    - ../roles/notifications             # Set up email notifications for the cluster
+    - ../roles/certificates              # Register the cluster with Let's Encrypt and generate certificates
+    - ../roles/seed_lxc_images           # Seed LXC images for the cluster
+    - ../roles/create_provisioning_user  # Create a user for Packer to use for provisioning
+    - ../roles/seed_iso                  # Seed ISO images for the cluster
+    - ../roles/seed_vm_images            # Seed VM images for the cluster
 
