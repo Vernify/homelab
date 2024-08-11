@@ -52,7 +52,7 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
     insecure_skip_tls_verify = true
     
     # VM General Settings
-    vm_id = "902"
+    vm_id = "901"
     vm_name = "ubuntu-server-noble-numbat"
     template_description = "Noble Numbat"
 
@@ -60,7 +60,7 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
     iso_file = "local:iso/ubuntu-24.04-live-server-amd64.iso"
     iso_storage_pool = "local"
     unmount_iso = true
-    template_name = "ubuntu-2404-template2"
+    template_name = "ubuntu-2404-template"
 
     # VM System Settings
     qemu_agent = true
