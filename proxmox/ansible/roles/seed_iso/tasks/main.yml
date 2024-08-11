@@ -11,12 +11,6 @@
   register: storage_content
   delegate_to: localhost
   run_once: yes
-
-- debug:
-    var: storage_content.json.data | map(attribute='volid') | list
-
-- debug:
-    var: iso_images
   
 - name: Download ISOs
   uri:
@@ -39,7 +33,17 @@
   run_once: yes
   when: "storage_content.json.data | map(attribute='volid') | list | select('search', item.name) | list | length == 0"
 
-- name: Poll storage every minute and wait for ISOs to be downloaded
+- debug:
+    var: storage_content.json.data | map(attribute='volid') | list
+  delegate_to: localhost
+  run_once: yes
+
+- debug:
+    var: storage_content.json.data | map(attribute='volid') | list
+  delegate_to: localhost
+  run_once: yes
+
+- name: Wait while ISOs are being downloaded
   uri:
     url: https://{{ primary_node }}:8006/api2/json/nodes/{{ groups['all'][0] }}/storage/{{ pool }}/content
     method: GET
@@ -51,6 +55,10 @@
   register: storage_content
   delegate_to: localhost
   run_once: yes
-  until: "iso_images | map(attribute='name') | list | difference(storage_content.json.data | map(attribute='volid') | list) | length == 0"
+  until: >
+    iso_images | map(attribute='name') | map('regex_replace', '^', 'local:iso/') | list |
+    difference(storage_content.json.data | map(attribute='volid') | list) |
+    length == 0
   retries: 60
   delay: 60
+

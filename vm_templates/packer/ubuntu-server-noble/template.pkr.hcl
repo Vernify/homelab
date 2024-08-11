@@ -52,18 +52,19 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
     insecure_skip_tls_verify = true
     
     # VM General Settings
-    vm_id = "901"
+    vm_id = "902"
     vm_name = "ubuntu-server-noble-numbat"
     template_description = "Noble Numbat"
 
     # VM OS Settings
     iso_file = "local:iso/ubuntu-24.04-live-server-amd64.iso"
-    iso_storage_pool = "local-lvm"
+    iso_storage_pool = "local"
     unmount_iso = true
-    template_name = "ubuntu-2404-template"
+    template_name = "ubuntu-2404-template2"
 
     # VM System Settings
     qemu_agent = true
+    machine = "q35"
 
     # VM Hard Disk Settings
     scsi_controller = "virtio-scsi-pci"
@@ -85,7 +86,7 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
     network_adapters {
         model = "virtio"
         bridge = "vmbr0"
-        firewall = "false"
+        #firewall = "false"
     } 
 
     # VM Cloud-Init Settings
@@ -101,6 +102,7 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
         "autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ ---<wait>",
         "<f10><wait>"
     ]
+
     boot = "c"
     boot_wait = "5s"
 
@@ -123,7 +125,6 @@ build {
 
     # Install and enable QEMU Guest Agent
     provisioner "shell" {
-            #"sudo systemctl enable qemu-guest-agent",
         inline = [
             "sudo apt-get update",
             "sudo apt-get install -y qemu-guest-agent",
@@ -140,7 +141,7 @@ build {
             "sudo apt -y autoremove --purge",
             "sudo apt -y clean",
             "sudo apt -y autoclean",
-            "sudo cloud-init clean",
+            "sudo cloud-init clean --machine-id",
             "sudo rm -f /etc/cloud/cloud.cfg.d/subiquity-disable-cloudinit-networking.cfg",
             "sudo rm -f /etc/netplan/00-installer-config.yaml",
             "sudo sync"

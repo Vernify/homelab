@@ -7,6 +7,9 @@
   debug:
     var: existing_images.stdout_lines
 
+- name: Update LXC images
+  command: pveam update
+
 - name: Download LXC images
   command: pveam download {{ lxc_storage }} {{ item }}
   loop: "{{ lxc_images }}"

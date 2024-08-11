@@ -4,9 +4,9 @@ autoinstall:
   locale: en_US
   keyboard:
     layout: us
-  updates: security
-  apt:
-    disable_suites: [security]
+#  updates: security
+#  apt:
+#    disable_suites: [security]
   ssh:
     install-server: true
     allow-pw: true
