@@ -1,0 +1,120 @@
+- name: GET current users
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/access/users
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+  register: current_users
+  delegate_to: localhost
+  run_once: yes
+
+- name: Create user for Packer seed
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/access/users
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    body: >
+      {
+        "userid": "packer@pve",
+        "firstname": "packer"
+      }
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  when: current_users.json.data | selectattr('userid', 'search', 'packer@pve') | list | length == 0
+
+- name: GET seed user tokens
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/access/users/packer@pve/token
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+  register: seed_user_tokens
+  delegate_to: localhost
+  run_once: yes
+
+- name: Create seed user token
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/access/users/packer@pve/token/provisioning
+    method: POST
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    body: >
+      {
+        "tokenid": "provisioning",
+        "userid": "packer@pve",
+        "privsep": 1
+      }
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  register: seed_user_token
+  when: seed_user_tokens.json.data | selectattr('tokenid', 'search', 'provisioning') | list | length == 0
+
+- name: Write token to file
+  copy:
+    content: "{{ seed_user_token.json.data.value }}"
+    dest: /root/packer_seed_user_token
+  delegate_to: localhost
+  run_once: yes
+  when: seed_user_token.json.data.value is defined
+
+- name: Read token from file, and store as fact
+  set_fact:
+    packer_seed_user_token: "{{ lookup('file', '/root/packer_seed_user_token') }}"
+  delegate_to: localhost
+  run_once: yes
+
+- name: GET Token permissions
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/access/acl
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+  register: seed_user_token_permissions
+  delegate_to: localhost
+  run_once: yes
+
+- name: Print seed user token permissions
+  debug:
+    var: seed_user_token_permissions.json.data
+  delegate_to: localhost
+  run_once: yes
+
+- name: Set Packer seed user permissions
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/access/acl
+    method: PUT
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+    body: >
+      {
+        "path": "/",
+        "roles": "Administrator",
+        "propagate": 1,
+        "tokens": "packer@pve!provisioning",
+        "users": "packer@pve"
+      }
+    body_format: json
+  delegate_to: localhost
+  run_once: yes
+  when: seed_user_token_permissions.json.data | selectattr('path', 'search', '/') | list | length == 0

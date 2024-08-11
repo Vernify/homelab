@@ -1,0 +1,56 @@
+---
+- name: List storage content
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/nodes/{{ groups['all'][0] }}/storage/{{ pool }}/content
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+  register: storage_content
+  delegate_to: localhost
+  run_once: yes
+
+- debug:
+    var: storage_content.json.data | map(attribute='volid') | list
+
+- debug:
+    var: iso_images
+  
+- name: Download ISOs
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/nodes/{{ groups['all'][0] }}/storage/{{ pool }}/download-url
+    method: POST
+    body_format: json
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    body: >
+      {
+        "content": "iso",
+        "filename": "{{ item.name }}",
+        "url": "{{ item.url }}"
+      }
+    validate_certs: no
+  loop: "{{ iso_images }}"
+  delegate_to: localhost
+  run_once: yes
+  when: "storage_content.json.data | map(attribute='volid') | list | select('search', item.name) | list | length == 0"
+
+- name: Poll storage every minute and wait for ISOs to be downloaded
+  uri:
+    url: https://{{ primary_node }}:8006/api2/json/nodes/{{ groups['all'][0] }}/storage/{{ pool }}/content
+    method: GET
+    headers:
+      CSRFPreventionToken: "{{ proxmox_csrf }}"
+      Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
+      Content-Type: "application/json"
+    validate_certs: no
+  register: storage_content
+  delegate_to: localhost
+  run_once: yes
+  until: "iso_images | map(attribute='name') | list | difference(storage_content.json.data | map(attribute='volid') | list) | length == 0"
+  retries: 60
+  delay: 60
