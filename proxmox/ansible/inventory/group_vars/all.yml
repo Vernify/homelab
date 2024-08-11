@@ -19,7 +19,7 @@ vm_template_names:
 pool: "local"
 iso_images:
   - name: "ubuntu-22.04.4-live-server-amd64.iso"
-    url: "https://releases.ubuntu.com/22.04/ubuntu-22.04.4-live-server-amd64.iso"
+    url: "https://ucmirror.canterbury.ac.nz/linux/ubuntu/jammy/ubuntu-22.04.4-live-server-amd64.iso"
   - name: "ubuntu-24.04-live-server-amd64.iso"
     url: "https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso"
   - name: "CentOS-7-x86_64-Minimal-1609-99.iso"
