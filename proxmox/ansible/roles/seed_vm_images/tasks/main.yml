@@ -1,0 +1,47 @@
+---
+- name: Set environment variables for Packer
+  set_fact:
+    proxmox_api_url: "https://{{ primary_node }}:8006/api2/json"
+    proxmox_api_token_id: 'packer@pve!provisioning'
+    proxmox_api_token_secret: "{{ packer_seed_user_token }}"
+    proxmox_node: "{{ groups['all'][0] }}"
+    ssh_password: "{{ cluster_password }}"
+    ssh_private_key_file: "~/.ssh/id_ecdsa"
+
+- name: List all guests on node
+  command: pvesh get /nodes/{{ inventory_hostname }}/qemu
+  register: existing_guests
+
+- name: Initialize Packer configuration
+  command: packer init .
+  args:
+    chdir: "{{ item.packer_directory }}"
+  delegate_to: localhost
+  run_once: yes
+  loop: "{{ vm_template_names }}"
+  loop_control:
+    loop_var: item
+  when: item.name not in existing_guests.stdout
+
+- debug:
+    var: existing_guests
+
+- name: Kick off Packer build if required
+  command: >
+    packer build
+    -var "proxmox_api_url={{ proxmox_api_url }}"
+    -var "proxmox_api_token_id={{ proxmox_api_token_id }}"
+    -var "proxmox_api_token_secret={{ proxmox_api_token_secret }}"
+    -var "ssh_password={{ ssh_password }}"
+    -var "ssh_private_key_file={{ ssh_private_key_file }}"
+    -var "node={{ proxmox_node }}"
+    template.pkr.hcl
+  args:
+    chdir: "{{ item.packer_directory }}"
+  delegate_to: localhost
+  run_once: yes
+  loop: "{{ vm_template_names }}"
+  loop_control:
+    loop_var: item
+  when: item.name not in existing_guests.stdout
+  

@@ -1,0 +1,13 @@
+---
+- name: List existing LXC images on hosts
+  command: pveam list {{ lxc_storage }}
+  register: existing_images
+
+- name: Print existing images
+  debug:
+    var: existing_images.stdout_lines
+
+- name: Download LXC images
+  command: pveam download {{ lxc_storage }} {{ item }}
+  loop: "{{ lxc_images }}"
+  when: item not in existing_images.stdout
