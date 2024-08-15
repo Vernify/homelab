@@ -1,0 +1,76 @@
+resource "kubernetes_deployment" "radarr" {
+  metadata {
+    name = "radarr"
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "radarr"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "radarr"
+        }
+      }
+
+      spec {
+        container {
+          image = "linuxserver/radarr:latest"
+          name  = "radarr"
+
+          port {
+            container_port = 7878
+          }
+
+          volume_mount {
+            mount_path = "/data"
+            name       = "media-storage"
+          }
+
+          volume_mount {
+            mount_path = "/config"
+            name       = "radarr-config-storage"
+          }
+        }
+
+        volume {
+          name = "media-storage"
+
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.media_pvc.metadata[0].name
+          }
+        }
+
+        volume {
+          name = "radarr-config-storage"
+
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.radarr_config_pvc.metadata[0].name
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_persistent_volume_claim" "radarr_config_pvc" {
+  metadata {
+    name = "radarr-config-pvc"
+  }
+
+  spec {
+    access_modes = ["ReadWriteMany"]
+    resources {
+      requests = {
+        storage = "10Gi"  # Adjust size as needed
+      }
+    }
+    storage_class_name = "immediate-local-path"
+  }
+}

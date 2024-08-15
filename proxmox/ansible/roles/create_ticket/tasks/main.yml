@@ -1,13 +1,14 @@
 - name: Set username as fact
   set_fact:
     proxmox_username: root@pam
+    passwd_file: /tmp/.proxmox_password
   delegate_to: localhost
   run_once: yes
 
 - name: Write cluster password to file
   copy:
     content: "{{ cluster_password }}"
-    dest: /root/.proxmox_password
+    dest: "{{ passwd_file }}"
     owner: root
     group: root
     mode: '0600'
@@ -21,7 +22,7 @@
     body_format: form-urlencoded
     body:
       username: "{{ proxmox_username }}"
-      password: "{{ lookup('file', '/root/.proxmox_password') }}"
+      password: "{{ lookup('file', passwd_file) }}"
     validate_certs: no
   register: ticket
   delegate_to: localhost
@@ -45,10 +46,10 @@
   delegate_to: localhost
   run_once: yes
 
-- name: Delete cluster password file
-  file:
-    path: /root/.proxmox_password
-    state: absent
-  delegate_to: localhost
-  run_once: yes
+#- name: Delete cluster password file
+#  file:
+#    path: "{{ passwd_file }}"
+#    state: absent
+#  delegate_to: localhost
+#  run_once: yes
 

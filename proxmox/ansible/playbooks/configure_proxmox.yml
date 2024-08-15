@@ -15,5 +15,5 @@
     - ../roles/seed_lxc_images           # Seed LXC images for the cluster
     - ../roles/create_provisioning_user  # Create a user for Packer to use for provisioning
     - ../roles/seed_iso                  # Seed ISO images for the cluster
-    - ../roles/seed_vm_images            # Seed VM images for the cluster
+    #- ../roles/seed_vm_images            # Seed VM images for the cluster
 

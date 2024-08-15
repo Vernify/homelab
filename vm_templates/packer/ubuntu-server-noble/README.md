@@ -5,8 +5,8 @@ proxmox_api_token_secret = "<proxmox api token>"
 ssh_password = "<SHA256 of your password>"
 
 # Executing
-packer build -var-file=credentials.pkr.hcl ubuntu-server-noble.pkr.hcl
+packer build -var-file=credentials.pkr.hcl ubuntu-server-noble/template.pkr.hcl
 OR
-packer build -debug -var-file=credentials.pkr.hcl ubuntu-server-noble.pkr.hcl
+packer build -debug -var-file=credentials.pkr.hcl ubuntu-server-noble/template.pkr.hcl
 OR
-PACKER_LOG=1 packer build -var-file=credentials.pkr.hcl ubuntu-server-noble.pkr.hcl
+PACKER_LOG=1 packer build -var-file=../credentials.pkr.hcl ubuntu-server-noble/template.pkr.hcl

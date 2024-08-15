@@ -1,18 +1,3 @@
-variable "number_k3s_masters" {
-  type = number
-  default = 3
-}
-
-variable "number_k3s_nodes" {
-  type = number
-  default = 3
-}
-
-variable "number_hypervisor_nodes" {
-  type = number
-  default = 3
-}
-
 variable "proxmox_api_url" {
     description = "The URL of the Proxmox API"
     type        = string

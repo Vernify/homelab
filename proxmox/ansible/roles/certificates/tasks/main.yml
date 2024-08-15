@@ -13,6 +13,7 @@
   delegate_to: localhost
   run_once: yes
 
+# Test first against https://acme-staging-v02.api.letsencrypt.org/directory
 - name: Create ACME Account
   uri:
     url: https://{{ primary_node }}:8006/api2/json/cluster/acme/account
@@ -22,12 +23,11 @@
       Cookie: "PVEAuthCookie={{ proxmox_ticket }}"
       Content-Type: "application/json"
     validate_certs: no
-    # https://acme-v02.api.letsencrypt.org/directory
     body: >
       {
         "contact": "{{ cloudflare_email }}",
         "name": "Cloudflare-dns",
-        "directory": "https://acme-staging-v02.api.letsencrypt.org/directory",
+        "directory": "https://acme-v02.api.letsencrypt.org/directory",
         "tos_url": "https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf",
       }
     body_format: json
