@@ -33,7 +33,7 @@ Will add ticks as they are migrated over.
 * &cross; Ceph Distributed storage provided and configured as part of Proxmox
   * &cross; [Longhorn] (if not sticking with Ceph)
 * &check; [K3S] container platform
-  * [Traefik] [Techno Tim walkthrough](https://technotim.live/posts/kube-traefik-cert-manager-le/)
+  * &cross; [Traefik] [Techno Tim walkthrough](https://technotim.live/posts/kube-traefik-cert-manager-le/)
 
 ## Services Platform
 * [AWX] deployment on K3S

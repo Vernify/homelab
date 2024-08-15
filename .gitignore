@@ -7,6 +7,7 @@
 .DS_Store
 Thumbs.db
 
+
 #
 # Packer
 #
@@ -24,6 +25,7 @@ credentials.pkr.hcl
 .vault_pass.txt
 *.vault
 *.vault.yml
+proxmox/ansible/vault/secrets.yml
 
 # Ignore temporary files
 *.retry

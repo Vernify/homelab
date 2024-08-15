@@ -31,6 +31,11 @@ variable "node" {
   default = "{{ env \"PROXMOX_NODE\" }}"
 }
 
+variable "template_storage" {
+  type    = string
+  default = "syn05-vm"
+}
+
 # Resource Definition for the VM Template
 packer {
   required_plugins {
@@ -72,7 +77,7 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
     disks {
         disk_size = "10G"
         format = "raw"
-        storage_pool = "local-lvm"
+        storage_pool = "${var.template_storage}"
         type = "virtio"
     }
 
@@ -91,7 +96,7 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
 
     # VM Cloud-Init Settings
     cloud_init = true
-    cloud_init_storage_pool = "local-lvm"
+    cloud_init_storage_pool = "${var.template_storage}"
 
     # PACKER Boot Commands
     boot_command = [
