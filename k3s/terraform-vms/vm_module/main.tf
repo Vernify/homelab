@@ -10,34 +10,33 @@ terraform {
 
 resource "proxmox_vm_qemu" "vm" {
   count = var.vm_count
-
-  name = "${var.vm_name_prefix}-${count.index + 1}"
+  name = "${var.name_prefix}-${count.index + 1}"
   target_node = "pve0${(count.index % var.number_hypervisor_nodes) + 1}"
-  vmid = var.vmid_start + count.index
-  desc = "${var.vm_name_prefix} ${count.index + 1}"
-
+  vmid = var.vmid_base + count.index
+  desc = "${var.description} ${count.index + 1}"
   onboot = true
   clone = var.clone_template
   full_clone = true
-
   agent = 1
   numa = true
   hotplug = "network,disk,usb,cpu,memory"
+  timeouts {
+    create = "30m"
+  }
 
   cores = var.cores
   sockets = 1
   cpu = "host"
-
   memory = var.memory
-
-  bootdisk = "virtio0"
   scsihw = "virtio-scsi-pci"
+  machine = "q35"
+  qemu_os = "other"
 
   disks {
     ide {
       ide0 {
         cloudinit {
-          storage = var.target_storage
+          storage = var.cloudinit_storage
         }
       }
     }
@@ -45,8 +44,8 @@ resource "proxmox_vm_qemu" "vm" {
       virtio0 {
         disk {
           size = var.disk_size
-          storage = var.target_storage
-          format = "raw"
+          storage = var.disk_storage
+          format = var.disk_format
         }
       }
     }
@@ -56,7 +55,7 @@ resource "proxmox_vm_qemu" "vm" {
     bridge = "vmbr0"
     model  = "virtio"
   }
-  ipconfig0 = "ip=${var.ip_base}${count.index + 1}/24,gw=${var.gateway}"
+  ipconfig0 = "ip=192.168.22.${var.ip_base + count.index}/24,gw=${var.gateway}"
   nameserver = var.nameserver
   searchdomain = var.searchdomain
   skip_ipv6 = true
@@ -64,12 +63,7 @@ resource "proxmox_vm_qemu" "vm" {
   os_type = "cloud-init"
 
   provisioner "remote-exec" {
-    inline = [
-      "while [ $(cloud-init status | grep -c 'status: done') -eq 0 ]; do sleep 5; done",
-      "sudo apt update",
-      "sudo apt install -y nfs-common",
-      "sudo reboot"
-    ]
+    inline = var.provisioner_inline
 
     connection {
       type        = "ssh"
@@ -79,4 +73,9 @@ resource "proxmox_vm_qemu" "vm" {
       agent       = false
     }
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
 }

@@ -17,11 +17,18 @@
 # Flannel: Default CNI, using eth0 as the interface.
 # Calico: Optionally enabled with eBPF support and specific version tagging.
 # Cilium: Provides advanced features like native routing, BGP control plane, and Hubble observability.
+# Reference:  https://technotim.live/posts/k3s-etcd-ansible/
 
 k3s_version: v1.30.2+k3s2
 
-# this is the user that has passwordless ssh access to the target nodes.
+# User and network variables
 ansible_user: werner
+network: 192.168.22
+default_gateway: "{{ network }}.1"
+api_endpoint: "{{ network }}.70"
+metal_lb_ip_range: "{{ network }}.71-{{ network }}.79"
+
+# this is the user that has passwordless ssh access to the target nodes.
 systemd_dir: /etc/systemd/system
 
 # Set your timezone
@@ -51,7 +58,7 @@ cilium_bgp: false
 # bgp parameters for cilium cni. only active when cilium_iface is defined and cilium_bgp is true.
 cilium_bgp_my_asn: "64513"
 cilium_bgp_peer_asn: "64512"
-cilium_bgp_peer_address: "192.168.75.1"
+cilium_bgp_peer_address: "{{ default_gateway }}"
 cilium_bgp_lb_cidr: "192.168.31.0/24"   # cidr for cilium loadbalancer ipam
 
 # enable kube-vip ARP broadcasts
@@ -63,11 +70,11 @@ kube_vip_bgp: false
 # bgp parameters for kube-vip
 kube_vip_bgp_routerid: "127.0.0.1"  # Defines the router ID for the BGP server
 kube_vip_bgp_as: "64513"  # Defines the AS for the BGP server
-kube_vip_bgp_peeraddress: "192.168.75.1"  # Defines the address for the BGP peer
+kube_vip_bgp_peeraddress: "{{ default_gateway }}"  # Defines the address for the BGP peer
 kube_vip_bgp_peeras: "64512"  # Defines the AS for the BGP peer
 
 # apiserver_endpoint is virtual ip-address which will be configured on each master
-apiserver_endpoint: "192.168.75.222"
+apiserver_endpoint: "{{ api_endpoint }}"
 
 # k3s_token is required  masters can talk together securely
 # this token should be alpha numeric only
@@ -129,7 +136,7 @@ metal_lb_speaker_tag_version: "v0.14.8"
 metal_lb_controller_tag_version: "v0.14.8"
 
 # metallb ip range for load balancer
-metal_lb_ip_range: "192.168.75.80-192.168.75.90"
+#metal_lb_ip_range: "192.168.22.71-192.168.22.79"
 
 # Only enable if your nodes are proxmox LXC nodes, make sure to configure your proxmox nodes
 # in your hosts.ini file.

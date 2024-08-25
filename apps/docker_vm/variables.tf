@@ -16,17 +16,14 @@ variable "proxmox_api_token_secret" {
     sensitive   = true
 }
 
-variable "number_hypervisor_nodes" {
-  type = number
-  default = 3
+variable "openvpn_user" {
+    description = "The username to authenticate with the OpenVPN server"
+    type        = string
+  
 }
 
-#variable "number_k3s_masters" {
-#  type = number
-#  default = 3
-#}
-#
-#variable "number_k3s_nodes" {
-#  type = number
-#  default = 3
-#}
+variable "openvpn_password" {
+    description = "The password to authenticate with the OpenVPN server"
+    type        = string
+    sensitive   = true
+}

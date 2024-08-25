@@ -7,7 +7,7 @@ resource "proxmox_lxc" "media" {
     hostname      = "media"
     ostemplate    = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
     password      = base64encode(var.vmid)
-    unprivileged  = true
+    unprivileged  = false
     onboot        = true
     start         = true
     hastate       = "started"
@@ -20,6 +20,11 @@ resource "proxmox_lxc" "media" {
       storage = "ceph01"
       size    = "50G"
     }
+
+    #features {
+    #  nesting = true
+    #  mount = "nfs;cifs"
+    #}
 
     network {
       name   = "eth0"
@@ -49,49 +54,59 @@ resource "null_resource" "wait_for_media" {
 resource "null_resource" "install_media" {
     depends_on = [null_resource.wait_for_media]
 
-    provisioner "remote-exec" {
-        connection {
-            type        = "ssh"
-            host        = replace(proxmox_lxc.media.network.0.ip, "/24", "")
-            user        = "root"
-            private_key = file("~/.ssh/id_rsa")
-        }
+    connection {
+      type        = "ssh"
+      host        = replace(proxmox_lxc.media.network.0.ip, "/24", "")
+      user        = "root"
+      private_key = file("~/.ssh/id_rsa")
+    }
 
+  # Install common packages and configure base system
+    provisioner "remote-exec" {
         inline = [
             "sudo add-apt-repository ppa:jcfp/nobetas",
-            "sudo apt-get update",
-            "sudo apt-get install -y nfs-common curl sqlite3 wget git-core python3-lxml sabnzbdplus ffmpeg mediainfo p7zip-full unrar unzip python3-pip",
+            "sudo apt update",
+            "sudo apt install -y nfs-common curl wget git-core python3-lxml ffmpeg mediainfo p7zip-full unrar unzip python3-pip",
             "sudo mkdir -p /media",
-            "echo '192.168.50.210:/volume2/media /media nfs defaults,nolock 0 0' | sudo tee -a /etc/fstab",
-            "sudo mount -a",
-            <<-EOF
-            curl -o- https://raw.githubusercontent.com/Sonarr/Sonarr/develop/distribution/debian/install.sh | sudo bash
-            wget --content-disposition 'http://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64'
-            tar -xvzf Radarr*.linux*.tar.gz
-            sudo mv Radarr /opt/
-            sudo chown -R radarr:radarr /opt/Radarr
-            cat << EOT | sudo tee /etc/systemd/system/radarr.service > /dev/null
-            [Unit]
-            Description=Radarr Daemon
-            After=syslog.target network.target
-            [Service]
-            User=radarr
-            Group=media
-            Type=simple
-
-            ExecStart=/opt/Radarr/Radarr -nobrowser -data=/var/lib/radarr/
-            TimeoutStopSec=20
-            KillMode=process
-            Restart=on-failure
-            [Install]
-            WantedBy=multi-user.target
-            EOT
-            sudo systemctl enable radarr
-            sudo systemctl start radarr
-            sudo systemctl -q daemon-reload
-            sudo systemctl enable --now -q radarr
-            rm Radarr*.linux*.tar.gz
-            EOF
+            "echo '192.168.50.210:/volume2/Media /media nfs defaults,nolock 0 0' | sudo tee -a /etc/fstab",
+            "sudo systemctl daemon-reload",
+            "sudo mount -a"
         ]
-    }
+    }    
+
+#    provisioner "remote-exec" {
+#        inline = [
+#            "sudo apt install -y sqlite3 sabnzbdplus",
+#            <<-EOF
+#            curl -o- https://raw.githubusercontent.com/Sonarr/Sonarr/develop/distribution/debian/install.sh | sudo bash
+#            wget --content-disposition 'http://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64'
+#            tar -xvzf Radarr*.linux*.tar.gz
+#            sudo mv Radarr /opt/
+#            sudo chown -R radarr:radarr /opt/Radarr
+#            cat << EOT | sudo tee /etc/systemd/system/radarr.service > /dev/null
+#            [Unit]
+#            Description=Radarr Daemon
+#            After=syslog.target network.target
+#            [Service]
+#            User=radarr
+#            Group=media
+#            Type=simple
+#
+#            ExecStart=/opt/Radarr/Radarr -nobrowser -data=/var/lib/radarr/
+#            TimeoutStopSec=20
+#            KillMode=process
+#            Restart=on-failure
+#            [Install]
+#            WantedBy=multi-user.target
+#            EOT
+#            sudo systemctl enable radarr
+#            sudo systemctl start radarr
+#            sudo systemctl -q daemon-reload
+#            sudo systemctl enable --now -q radarr
+#            rm Radarr*.linux*.tar.gz
+#            EOF
+#        ]
+#    }
+
+
 }

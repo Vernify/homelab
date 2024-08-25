@@ -1,3 +1,8 @@
+# Define variables to be used in the storage.tf file
+variable "nfs_server" {
+  description = "The IP address of the NFS server"
+  default     = "192.168.50.210"
+}
 resource "kubernetes_persistent_volume" "media_pv" {
   metadata {
     name = "plex-media-pv"
@@ -17,7 +22,7 @@ resource "kubernetes_persistent_volume" "media_pv" {
     persistent_volume_source {
       nfs {
         path   = "/volume2/Media"
-        server = "192.168.50.210"
+        server = var.nfs_server
       }
     }
 
@@ -44,7 +49,7 @@ resource "kubernetes_persistent_volume" "plex_config_pv" {
     persistent_volume_source {
       nfs {
         path   = "/volume2/docker/plex"
-        server = "192.168.50.210"
+        server = var.nfs_server
       }
     }
 
