@@ -33,6 +33,7 @@ variable "node" {
 
 variable "template_storage" {
   type    = string
+  #default = "syn05-vm"
   default = "ceph-prov"
 }
 
@@ -46,7 +47,7 @@ packer {
   }
 }
 
-source "proxmox-iso" "ubuntu-server-noble-numbat" {
+source "proxmox-iso" "ubuntu-server-jammy" {
     # Proxmox Connection Settings
     proxmox_url = "${var.proxmox_api_url}"
     username = "${var.proxmox_api_token_id}"
@@ -57,15 +58,15 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
     insecure_skip_tls_verify = true
     
     # VM General Settings
-    vm_id = "901"
-    vm_name = "ubuntu-server-noble-numbat"
-    template_description = "Noble Numbat"
+    vm_id = "902"
+    vm_name = "ubuntu-server-jammy"
+    template_description = "Ubuntu 22.04 Jammy"
 
     # VM OS Settings
-    iso_file = "local:iso/ubuntu-24.04-live-server-amd64.iso"
+    iso_file = "local:iso/ubuntu-22.04.4-live-server-amd64.iso"
     iso_storage_pool = "local"
     unmount_iso = true
-    template_name = "ubuntu-2404-template"
+    template_name = "ubuntu-2204-template"
 
     # VM System Settings
     qemu_agent = true
@@ -76,7 +77,6 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
 
     disks {
         disk_size = "10G"
-        #format = "raw"
         format = "qcow2"
         storage_pool = "${var.template_storage}"
         type = "virtio"
@@ -126,8 +126,8 @@ source "proxmox-iso" "ubuntu-server-noble-numbat" {
 # Build Definition to create the VM Template
 build {
 
-    name = "ubuntu-server-noble-numbat"
-    sources = ["proxmox-iso.ubuntu-server-noble-numbat"]
+    name = "ubuntu-server-jammy"
+    sources = ["proxmox-iso.ubuntu-server-jammy"]
 
     # Install and enable QEMU Guest Agent
     provisioner "shell" {
@@ -166,6 +166,7 @@ build {
     }
 }
 
-# Once completed, run the following on one of the pve nodes:
-# qm disk move 901 virtio0 ceph-templates
-# qm disk move 901 ide0 ceph-templates
+# Should you need to move templates between storage pools, 
+# you can use the following commands:
+# qm disk move 902 ide0 ceph01
+# qm disk move 902 virtio0 ceph01

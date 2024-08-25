@@ -1,6 +1,7 @@
 # Playbook to ensure that the hosts are reachable
 - name: Test Connectivity
   hosts: all
+  gather_facts: no
   tasks:
     - name: Ping all hosts
       ping:

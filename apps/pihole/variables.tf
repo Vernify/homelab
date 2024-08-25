@@ -1,4 +1,3 @@
-# variables.tf
 variable "proxmox_api_url" {
     description = "The URL of the Proxmox API"
     type        = string
@@ -16,17 +15,8 @@ variable "proxmox_api_token_secret" {
     sensitive   = true
 }
 
-variable "number_hypervisor_nodes" {
-  type = number
-  default = 3
+variable "password" {
+    description = "The password for the Pihole web interface"
+    type        = string
+    sensitive   = true
 }
-
-#variable "number_k3s_masters" {
-#  type = number
-#  default = 3
-#}
-#
-#variable "number_k3s_nodes" {
-#  type = number
-#  default = 3
-#}

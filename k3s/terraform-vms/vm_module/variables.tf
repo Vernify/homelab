@@ -3,7 +3,7 @@ variable "vm_count" {
   type = number
 }
 
-variable "vm_name_prefix" {
+variable "name_prefix" {
   type = string
 }
 
@@ -11,8 +11,18 @@ variable "number_hypervisor_nodes" {
   type = number
 }
 
-variable "vmid_start" {
+variable "disk_format" {
+  description = "The format of the disk (e.g., raw, qcow2)"
+  type        = string
+  default     = "qcow2"
+}
+
+variable "vmid_base" {
   type = number
+}
+
+variable "description" {
+  type = string
 }
 
 variable "clone_template" {
@@ -27,12 +37,20 @@ variable "memory" {
   type = number
 }
 
+variable "cloudinit_storage" {
+  type = string
+}
+
 variable "disk_size" {
   type = string
 }
 
-variable "ip_base" {
+variable "disk_storage" {
   type = string
+}
+
+variable "ip_base" {
+  type = number
 }
 
 variable "gateway" {
@@ -55,7 +73,6 @@ variable "ssh_private_key" {
   type = string
 }
 
-variable "target_storage" {
-  type = string
-  default = "local-lvm"
+variable "provisioner_inline" {
+  type = list(string)
 }

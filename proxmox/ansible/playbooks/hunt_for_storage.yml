@@ -1,0 +1,31 @@
+---
+- hosts: all
+  tasks:
+
+    - name: List all Ceph pools
+      shell: ceph osd pool ls
+      register: ceph_pools
+
+    - name: Set fact for pool list
+      set_fact:
+        pool_list: "{{ ceph_pools.stdout_lines }}"
+
+    - name: List RBD images in each pool
+      shell: "rbd ls {{ item }}"
+      loop: "{{ pool_list }}"
+      register: rbd_images
+      ignore_errors: yes
+
+    - name: Set fact for images to remove
+      set_fact:
+        images_to_remove: "{{ rbd_images.results | selectattr('stdout', 'search', 'vm-401-cloudinit|vm-402-cloudinit|vm-403-cloudinit') | map(attribute='stdout_lines') | flatten }}"
+
+    - name: Remove stale RBD images
+      shell: "rbd rm {{ item }}"
+      loop: "{{ images_to_remove }}"
+      when: item is defined and item != ""
+      ignore_errors: yes
+
+    - name: Restart Proxmox services
+      command: systemctl restart pve-cluster pvedaemon pveproxy
+      when: images_to_remove | length > 0
