@@ -1,0 +1,15 @@
+replicaCount: 1
+
+image:
+  repository: graphiteapp/graphite-statsd
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer
+  port: 80
+
+persistence:
+  path: "/mnt/graphite/data"
+  size: 5Gi
+  storageClass: graphite-storage
