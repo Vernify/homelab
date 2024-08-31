@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphite
+  namespace: graphite
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: graphite
+  template:
+    metadata:
+      labels:
+        app: graphite
+    spec:
+      initContainers:
+        - name: init-mkdir
+          image: busybox
+          command: ['sh', '-c', 'mkdir -p {{ .Values.persistence.path }}']
+          volumeMounts:
+            - mountPath: {{ .Values.persistence.path }}
+              name: graphite-storage
+      containers:
+        - name: graphite
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: 80
+            - containerPort: 2003
+            - containerPort: 2004
+            - containerPort: 2023
+            - containerPort: 2024
+            - containerPort: 8125
+              protocol: UDP
+            - containerPort: 8126
+          volumeMounts:
+            - mountPath: "/var/lib/graphite"
+              name: graphite-storage
+      volumes:
+        - name: graphite-storage
+          persistentVolumeClaim:
+            claimName: graphite-pvc
