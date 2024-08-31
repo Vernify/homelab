@@ -1,10 +1,4 @@
 # Create a reverse proxy for the k3s cluster
-# The server should act as reverse proxy for:
-# nzbget.vernify.com -> 192.168.22.26:6789
-# prowlarr.vernify.com -> 192.168.22.26:9696
-# sonarr.vernify.com -> 192.168.22.26:8989
-# radarr.vernify.com -> 192.168.22.26:7878
-# bazarr.vernify.com -> 192.168.22.26:6767
 provider "kubernetes" {
   config_path = "~/.kube/config"
 }
@@ -32,9 +26,9 @@ resource "kubernetes_config_map" "nginx_config" {
           }
         }
 
+        # Prowlarr
         server {
           listen 80;
-
           server_name prowlarr.vernify.com;
           location / {
             proxy_pass http://192.168.22.26:9696;
@@ -45,6 +39,7 @@ resource "kubernetes_config_map" "nginx_config" {
           }
         }
 
+        # Sonarr
         server {
           listen 80;
 
@@ -58,6 +53,7 @@ resource "kubernetes_config_map" "nginx_config" {
           }
         }
 
+        # Radarr
         server {
           listen 80;
 
@@ -71,6 +67,7 @@ resource "kubernetes_config_map" "nginx_config" {
           }
         }
 
+        # Bazarr
         server {
           listen 80;
 
@@ -83,6 +80,97 @@ resource "kubernetes_config_map" "nginx_config" {
             proxy_set_header X-Forwarded-Proto $scheme;
           }
         }
+
+        # Home Assistant
+        server {
+          listen 80;
+
+          server_name homeassistant.vernify.com;
+          location / {
+            proxy_pass http://192.168.22.27:8123;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        }
+
+        # Graphite listens on ports 80,2003,2004,2023,2024,8125,8126
+        server {
+          listen 80;
+          server_name graphite.vernify.com;
+        
+          location / {
+            proxy_pass http://192.168.22.73:80;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        
+          location /2003 {
+            proxy_pass http://192.168.22.73:2003;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        
+          location /2004 {
+            proxy_pass http://192.168.22.73:2004;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        
+          location /2023 {
+            proxy_pass http://192.168.22.73:2023;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        
+          location /2024 {
+            proxy_pass http://192.168.22.73:2024;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        
+          location /8125 {
+            proxy_pass http://192.168.22.73:8125;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        
+          location /8126 {
+            proxy_pass http://192.168.22.73:8126;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        }
+
+        # Grafana
+        server {
+          listen 80;
+
+          server_name grafana.vernify.com;
+          location / {
+            proxy_pass http://192.168.22.74:3000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+          }
+        }
+
       }
     EOT
   }
@@ -161,4 +249,3 @@ resource "kubernetes_service" "nginx" {
 output "nginx_service_ip" {
   value = kubernetes_service.nginx.status.0.load_balancer.0.ingress.0.ip
 }
-

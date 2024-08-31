@@ -51,7 +51,7 @@ resource "proxmox_vm_qemu" "docker-vm" {
       virtio {
         virtio0 {
           disk {
-            size = "30G"
+            size = "100G"
             storage = "ceph01"
             format = "raw"
           }
