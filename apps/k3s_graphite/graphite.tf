@@ -1,5 +1,12 @@
 # This will deploy Graphite on the K3s cluster
 # docker run -d --name graphite --restart=always -p 80:80 -p 2003-2004:2003-2004 -p 2023-2024:2023-2024  -p 8125:8125/udp  -p 8126:8126  graphiteapp/graphite-statsd
+terraform {
+    required_version = ">= 0.13.0"
+}
+
+provider "kubernetes" {
+  config_path = "~/.kube/config"
+}
 
 resource "kubernetes_deployment" "graphite" {
   metadata {
