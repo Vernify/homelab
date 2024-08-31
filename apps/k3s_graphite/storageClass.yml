@@ -1,0 +1,6 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: immediate-local-path
+provisioner: rancher.io/local-path
+volumeBindingMode: Immediate
