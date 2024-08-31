@@ -13,7 +13,7 @@ resource "kubernetes_config_map" "nginx_config" {
   metadata {
     name = "nginx-config"
   }
-
+ 
   data = {
     "nginx.conf" = <<-EOT
       events {}
