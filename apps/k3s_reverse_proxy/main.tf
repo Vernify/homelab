@@ -51,6 +51,10 @@ resource "kubernetes_deployment" "nginx" {
       }
     }
   }
+
+  timeouts {
+    create = "5m"
+  }
 }
 
 # Expose the Nginx container
@@ -70,6 +74,12 @@ resource "kubernetes_service" "nginx" {
     }
 
     type = "LoadBalancer"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations["metallb.universe.tf/ip-allocated-from-pool"]
+    ]
   }
 }
 
