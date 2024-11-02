@@ -36,10 +36,10 @@ Will add ticks as they are migrated over.
   * &cross; [Traefik] [Techno Tim walkthrough](https://technotim.live/posts/kube-traefik-cert-manager-le/)
 
 ## Services Platform
-* [AWX] deployment on K3S
+* &check; [AWX] deployment on K3S
 * Hashicorp [Vault] deployment on K3S
   * Looking at [Conjur] and [Summon] as possible replacement
-* [Pi-hole] deployment on K3S
+* &check; [Pi-hole] deployment on K3S
 * [Jenkins] for CI
 * [Cinc] (Open-source Chef)
 * [Postfix] for MTA
@@ -63,6 +63,7 @@ Will add ticks as they are migrated over.
 * [Grafana] for observability
 * [Betterstack] for alerting and external monitoring
   * [Openstatus] possible open-source replacement external monitoring
+* [Watchtower] Containers management and updates
 
 ## Media apps
 * [Plex] and related containers
@@ -105,4 +106,5 @@ Will add ticks as they are migrated over.
 [Fail2Ban]: https://github.com/fail2ban/fail2ban
 [Conjur]: https://docs.cyberark.com/conjur-cloud/latest/en/Content/Resources/_TopNav/cc_Home.htm
 [Summon]:https://www.conjur.org/api/#inject-secrets
+[Watchtower]: https://containrrr.dev/watchtower/
 <!-- References End -->
