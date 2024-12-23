@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  netbox:
+    image: netboxcommunity/netbox
+    container_name: netbox
+    environment:
+      - NETBOX_ROOT_PASSWORD=${NETBOX_ROOT_PASSWORD:-netbox_root_pw}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

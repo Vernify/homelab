@@ -38,6 +38,28 @@ resource "kubernetes_deployment" "grafana" {
           port {
             container_port = 3000
           }
+
+          liveness_probe {
+            http_get {
+              path = "/api/health"
+              port = 3000
+            }
+            initial_delay_seconds = 60
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 10
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/api/health"
+              port = 3000
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 3
+          }
         }
       }
     }
