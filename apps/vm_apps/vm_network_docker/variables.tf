@@ -59,3 +59,8 @@ variable "memory" {
   description = "Memory for the LXC container"
   type        = string
 }
+
+variable "cores" {
+  description = "Number of VM cores"
+  type        = number
+}

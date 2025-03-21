@@ -1,5 +1,5 @@
 variable "vmid" {
-  default = 1113
+  default = 022113
 }
 resource "proxmox_lxc" "plex" {
     vmid          = var.vmid
@@ -29,15 +29,6 @@ resource "proxmox_lxc" "plex" {
       gw     = "192.168.22.1"
     }
 
-  # Create a 50G drive mounted at /backup
-  # Mount is on the host, not the container
-  #mountpoint {
-  #  key     = "0"
-  #  slot    = "0"
-  #  storage = "syn05"
-  #  mp      = "/backup"
-  #  size    = "50G"
-  #}
 }
 output "container_ip" {
   value = "${proxmox_lxc.plex.network.0.ip}"
@@ -73,8 +64,10 @@ resource "null_resource" "install_plex" {
             "sudo mkdir -p /media",
             "echo '192.168.50.210:/volume2/media /media nfs defaults,nolock 0 0' | sudo tee -a /etc/fstab",
             "sudo mount -a",
-            "curl https://downloads.plex.tv/plex-media-server-new/1.40.5.8854-f36c552fd/debian/plexmediaserver_1.40.5.8854-f36c552fd_amd64.deb -o plex.deb",
-            "sudo dpkg -i plex.deb",
+            "curl -fsSL https://downloads.plex.tv/plex-keys/PlexSign.key | sudo apt-key add - ",
+            "echo 'deb https://downloads.plex.tv/repo/deb/ public main' | sudo tee /etc/apt/sources.list.d/plex.list",
+            "sudo apt-get update",
+            "sudo apt install plexmediaserver",
             "sudo systemctl start plexmediaserver",
             "sudo systemctl enable plexmediaserver",
         ]
