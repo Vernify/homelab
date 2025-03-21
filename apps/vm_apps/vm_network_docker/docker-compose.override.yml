@@ -1,0 +1,17 @@
+services:
+  netbox:
+    ports:
+      - 8000:8080
+    environment:
+      - SKIP_SUPERUSER=0
+      - SUPERUSER_EMAIL="wernervdmerwe@gmail.com"
+      - DB_WAIT_TIMEOUT=30
+      - DB_DEBUG=1
+      - MAX_DB_WAIT_TIME=3600
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
+  postgres:
+    restart: unless-stopped
+  redis-cache:
+    restart: unless-stopped

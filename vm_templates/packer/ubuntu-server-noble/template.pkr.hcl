@@ -166,6 +166,3 @@ build {
     }
 }
 
-# Once completed, run the following on one of the pve nodes:
-# qm disk move 901 virtio0 ceph-templates
-# qm disk move 901 ide0 ceph-templates
