@@ -2,6 +2,7 @@
 variable "proxmox_api_url" {
     description = "The URL of the Proxmox API"
     type        = string
+    default     = "https://pve08.vernify.com:8006/api2/json"
 }
 
 variable "proxmox_api_token_id" {

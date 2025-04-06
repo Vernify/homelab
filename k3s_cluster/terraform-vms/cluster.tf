@@ -63,7 +63,7 @@ module "nodes" {
   memory = 8192
   cloudinit_storage = "local-lvm"
   disk_size = "30G"
-  disk_storage = "ceph01"
+  disk_storage = "local-lvm"
   disk_format = "raw"
   ip_base = local.node_ips[0]
   gateway = local.gateway

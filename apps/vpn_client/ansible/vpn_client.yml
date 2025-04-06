@@ -1,0 +1,76 @@
+---
+# Ansible playbook to install and configure OpenVPN client and OpenFortiVPN client
+- hosts: ics_vpn_client
+  become: yes
+  tasks:
+    - name: Install OpenVPN client
+      apt:
+        name: openvpn
+        state: present
+
+    - name: Install OpenFortiVPN client
+      apt:
+        name: openfortivpn
+        state: present
+
+    - name: Enable ip_v4 forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        state: present
+        reload: yes
+
+    - name: Persist ip_v4 forwarding settings
+      copy:
+        dest: /etc/sysctl.d/99-ipforward.conf
+        content: |
+          net.ipv4.ip_forward = 1
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy OpenVPN client configuration file
+      copy:
+        content: "{{ lookup('file', 'vaulted_openvpn_client.conf') }}"
+        dest: /etc/openvpn/client.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start OpenVPN client service
+      service:
+        name: openvpn@client
+        state: started
+        enabled: yes
+
+    - name: Copy Fortinet client configuration file
+      copy:
+        content: "{{ lookup('file', 'vaulted_forticlient.conf') }}"
+        dest: /etc/openfortivpn/config
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create Forticlient start script
+      copy:
+        content: |
+          #!/bin/bash
+          openfortivpn -c /etc/openfortivpn/config
+        dest: /usr/local/bin/start_forticlient
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install iptables-persistent for saving iptables rules
+      apt:
+        name: iptables-persistent
+        state: present
+
+    - name: Masquerade outbound traffic through ppp0
+      command: iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE
+
+    - name: Masquerade outbound traffic through ovpn-saicom
+      command: iptables -t nat -A POSTROUTING -o ovpn-saicom -j MASQUERADE
+
+    - name: Save iptables rules to persist them
+      shell: "iptables-save > /etc/iptables/rules.v4"
