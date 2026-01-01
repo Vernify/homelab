@@ -7,6 +7,7 @@
   become: true
   environment:
     DOCKER_HOST: unix:///var/run/docker.sock
+  changed_when: true
 
 - name: Restart Netbox containers
   ansible.builtin.command:
@@ -16,3 +17,4 @@
     DOCKER_HOST: unix:///var/run/docker.sock
   args:
     chdir: /opt/netbox
+  changed_when: true

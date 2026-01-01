@@ -1,0 +1,65 @@
+---
+- name: Ensure Netbox directory exists
+  ansible.builtin.file:
+    path: /opt/netbox
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure Netbox configuration directory exists
+  ansible.builtin.file:
+    path: /opt/netbox/configuration
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy Netbox consolidated environment file
+  ansible.builtin.template:
+    src: netbox.env.consolidated.j2
+    dest: /opt/netbox/.env
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart Netbox containers
+
+- name: Deploy Netbox base docker-compose file
+  ansible.builtin.template:
+    src: docker-compose.netbox.base.yml.j2
+    dest: /opt/netbox/docker-compose.yml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy Netbox docker-compose override configuration
+  ansible.builtin.template:
+    src: docker-compose.netbox.yml.j2
+    dest: /opt/netbox/docker-compose.override.yml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Netbox containers
+
+- name: Deploy Netbox configuration files
+  ansible.builtin.template:
+    src: "netbox-configuration.py.j2"
+    dest: "/opt/netbox/configuration/configuration.py"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Netbox containers
+
+- name: Remove old env subdirectory if it exists
+  ansible.builtin.file:
+    path: /opt/netbox/env
+    state: absent
+
+- name: Bring up Netbox stack with docker compose
+  ansible.builtin.command:
+    cmd: docker compose -f /opt/netbox/docker-compose.yml -f /opt/netbox/docker-compose.override.yml up -d
+  become: true
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  register: vm_network_docker_netbox_compose_result
+  changed_when: "'Started' in vm_network_docker_netbox_compose_result.stderr or 'Created' in vm_network_docker_netbox_compose_result.stderr"

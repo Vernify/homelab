@@ -1,0 +1,175 @@
+#!/bin/bash
+# Restore script for network-docker VM
+# Managed by Ansible - do not edit directly
+
+set -euo pipefail
+
+# Configuration
+BACKUP_DIR="{{ vm_network_docker_backup_mount }}/servers/{{ ansible_hostname }}"
+HOSTNAME="{{ ansible_hostname }}"
+LOG_FILE="/var/log/network-docker-restore.log"
+
+# Logging function
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "${LOG_FILE}"
+}
+
+# Error handling
+error_exit() {
+    log "ERROR: $1"
+    exit 1
+}
+
+# Usage function
+usage() {
+    cat << EOF
+Usage: $0 [BACKUP_FILE]
+
+Restore network-docker VM from backup.
+
+If BACKUP_FILE is not specified, will list available backups and prompt for selection.
+
+Examples:
+  $0                                           # Interactive mode
+  $0 ${BACKUP_DIR}/${HOSTNAME}-20260101_120000.tar.gz
+
+EOF
+    exit 1
+}
+
+# List available backups
+list_backups() {
+    log "Available backups in ${BACKUP_DIR}:"
+    if ls "${BACKUP_DIR}"/${HOSTNAME}-*.tar.gz 1> /dev/null 2>&1; then
+        ls -lht "${BACKUP_DIR}"/${HOSTNAME}-*.tar.gz | head -10
+    else
+        log "No backups found"
+        exit 1
+    fi
+}
+
+# Main restore function
+restore_backup() {
+    local BACKUP_FILE="$1"
+    
+    log "=========================================="
+    log "Starting restore for ${HOSTNAME}"
+    log "Backup file: ${BACKUP_FILE}"
+    log "=========================================="
+    
+    # Validate backup file exists
+    if [ ! -f "${BACKUP_FILE}" ]; then
+        error_exit "Backup file ${BACKUP_FILE} does not exist"
+    fi
+    
+    # Confirm restore
+    log "WARNING: This will stop all containers and restore data."
+    read -p "Are you sure you want to continue? (yes/no): " -r
+    if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+        log "Restore cancelled by user"
+        exit 0
+    fi
+    
+    # Create temporary extraction directory
+    TMP_DIR=$(mktemp -d)
+    trap 'rm -rf ${TMP_DIR}' EXIT
+    
+    log "Extracting backup to ${TMP_DIR}..."
+    tar xzf "${BACKUP_FILE}" -C "${TMP_DIR}" || error_exit "Failed to extract backup"
+    
+    # Stop Docker containers
+    log "Stopping Docker containers..."
+    docker stop $(docker ps -q) 2>/dev/null || log "No running containers to stop"
+    
+    # Stop Docker service
+    log "Stopping Docker service..."
+    systemctl stop docker || error_exit "Failed to stop Docker service"
+    
+    # Backup current volumes (just in case)
+    if [ -d /var/lib/docker/volumes ]; then
+        log "Creating safety backup of current volumes..."
+        mv /var/lib/docker/volumes /var/lib/docker/volumes.pre-restore-$(date +%Y%m%d_%H%M%S) || log "Warning: Failed to create safety backup"
+    fi
+    
+    # Restore Docker volumes
+    log "Restoring Docker volumes..."
+    if [ -f "${TMP_DIR}/volumes/docker-volumes.tar.gz" ]; then
+        tar xzf "${TMP_DIR}/volumes/docker-volumes.tar.gz" -C /var/lib/docker || error_exit "Failed to restore Docker volumes"
+        log "Docker volumes restored successfully"
+    else
+        error_exit "Docker volumes backup not found in archive"
+    fi
+    
+    # Restore configurations (optional - should be managed by Ansible)
+    log "Restoring configurations..."
+    if [ -d "${TMP_DIR}/configs" ]; then
+        # Restore UniFi compose if it exists in backup
+        if [ -f "${TMP_DIR}/configs/docker-compose.yml" ]; then
+            mkdir -p /opt/unifi
+            cp "${TMP_DIR}/configs/docker-compose.yml" /opt/unifi/ || log "Warning: Failed to restore UniFi compose"
+        fi
+        
+        # Restore Netbox configurations if they exist
+        if [ -d "${TMP_DIR}/configs/netbox" ]; then
+            mkdir -p /opt/netbox
+            [ -f "${TMP_DIR}/configs/netbox/docker-compose.yml" ] && cp "${TMP_DIR}/configs/netbox/docker-compose.yml" /opt/netbox/ || true
+            [ -d "${TMP_DIR}/configs/netbox/env" ] && cp -r "${TMP_DIR}/configs/netbox/env" /opt/netbox/ || true
+            [ -d "${TMP_DIR}/configs/netbox/configuration" ] && cp -r "${TMP_DIR}/configs/netbox/configuration" /opt/netbox/ || true
+        fi
+        log "Configurations restored"
+    fi
+    
+    # Start Docker service
+    log "Starting Docker service..."
+    systemctl start docker || error_exit "Failed to start Docker service"
+    
+    # Wait for Docker to be ready
+    sleep 5
+    
+    # Start containers
+    log "Starting containers..."
+    if [ -f /opt/unifi/docker-compose.yml ]; then
+        log "Starting UniFi stack..."
+        (cd /opt/unifi && docker compose up -d) || log "Warning: Failed to start UniFi"
+    fi
+    
+    if [ -f /opt/netbox/docker-compose.yml ]; then
+        log "Starting Netbox stack..."
+        (cd /opt/netbox && docker compose up -d) || log "Warning: Failed to start Netbox"
+    fi
+    
+    # Show container status
+    log "Container status:"
+    docker ps -a --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}" | tee -a "${LOG_FILE}"
+    
+    log "=========================================="
+    log "Restore completed successfully"
+    log "Please verify services are running correctly"
+    log "=========================================="
+}
+
+# Main script logic
+if [ $# -eq 0 ]; then
+    # Interactive mode
+    list_backups
+    echo ""
+    read -p "Enter backup file path (or 'latest' for most recent): " -r BACKUP_INPUT
+    
+    if [ "${BACKUP_INPUT}" == "latest" ]; then
+        BACKUP_FILE=$(ls -t "${BACKUP_DIR}"/${HOSTNAME}-*.tar.gz 2>/dev/null | head -1)
+        if [ -z "${BACKUP_FILE}" ]; then
+            error_exit "No backups found"
+        fi
+    else
+        BACKUP_FILE="${BACKUP_INPUT}"
+    fi
+elif [ "$1" == "-h" ] || [ "$1" == "--help" ]; then
+    usage
+else
+    BACKUP_FILE="$1"
+fi
+
+# Run restore
+restore_backup "${BACKUP_FILE}"
+
+exit 0

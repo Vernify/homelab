@@ -1,0 +1,36 @@
+---
+- name: Wait for SSH availability
+  ansible.builtin.wait_for_connection:
+    delay: 10
+    sleep: 2
+    timeout: 600
+  register: vm_network_docker_ssh_ready
+
+- name: Show SSH connection established
+  ansible.builtin.debug:
+    msg: "SSH connection established to {{ ansible_hostname }}"
+
+- name: Wait for cloud-init to finish
+  ansible.builtin.command:
+    cmd: cloud-init status --wait
+  register: vm_network_docker_cloud_init_status
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Show cloud-init status
+  ansible.builtin.debug:
+    msg: "cloud-init status: {{ vm_network_docker_cloud_init_status.stdout | default('unknown') }}"
+
+- name: Check system uptime
+  ansible.builtin.command:
+    cmd: uptime
+  register: vm_network_docker_uptime
+  changed_when: false
+
+- name: Show system uptime
+  ansible.builtin.debug:
+    msg: |
+      System uptime: {{ vm_network_docker_uptime.stdout }}
+      OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      Kernel: {{ ansible_kernel }}

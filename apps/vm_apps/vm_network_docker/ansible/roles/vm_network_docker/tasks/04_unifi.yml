@@ -1,0 +1,58 @@
+---
+- name: Ensure UniFi directory exists
+  ansible.builtin.file:
+    path: /opt/unifi
+    state: directory
+    owner: werner
+    group: werner
+    mode: '0755'
+
+- name: Copy UniFi docker-compose
+  ansible.builtin.template:
+    src: docker-compose.unifi.yml.j2
+    dest: /opt/unifi/docker-compose.yml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Bring up UniFi stack with docker compose
+  ansible.builtin.command:
+    cmd: docker compose -f /opt/unifi/docker-compose.yml up -d
+  become: true
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  register: vm_network_docker_unifi_compose_result
+  changed_when: "'Started' in vm_network_docker_unifi_compose_result.stderr or 'Created' in vm_network_docker_unifi_compose_result.stderr"
+
+- name: Wait for UniFi system.properties file to be created
+  ansible.builtin.wait_for:
+    path: "{{ vm_network_docker_unifi_data_dir }}/system.properties"
+    state: present
+    timeout: "{{ vm_network_docker_unifi_wait_timeout }}"
+
+- name: Check current system_ip value in system.properties
+  ansible.builtin.shell: |
+    grep -E '^system_ip=' {{ vm_network_docker_unifi_data_dir }}/system.properties || echo "not_set"
+  register: vm_network_docker_current_system_ip
+  changed_when: false
+  failed_when: false
+
+- name: Configure UniFi system_ip in system.properties (if needed)
+  ansible.builtin.shell: |
+    sed -i.bak 's/^#*system_ip=.*/system_ip={{ vm_network_docker_unifi_system_ip }}/' {{ vm_network_docker_unifi_data_dir }}/system.properties
+    if ! grep -q '^system_ip=' {{ vm_network_docker_unifi_data_dir }}/system.properties; then
+      echo "system_ip={{ vm_network_docker_unifi_system_ip }}" >> {{ vm_network_docker_unifi_data_dir }}/system.properties
+    fi
+  when: vm_network_docker_current_system_ip.stdout.find('system_ip=' + vm_network_docker_unifi_system_ip) == -1
+
+- name: Ensure UniFi is accessible
+  ansible.builtin.uri:
+    url: "http://{{ vm_network_docker_unifi_system_ip }}:8080/status"
+    method: GET
+    status_code: [200, 302, 404]
+    timeout: 10
+  register: vm_network_docker_unifi_status
+  until: vm_network_docker_unifi_status is succeeded
+  retries: 6
+  delay: 10
+  failed_when: false

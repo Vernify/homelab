@@ -1,0 +1,32 @@
+---
+- name: Show remote hostname (safe, no changes)
+  ansible.builtin.debug:
+    msg: "Remote host: {{ ansible_hostname }}"
+
+- name: Install NFS client packages
+  ansible.builtin.apt:
+    name:
+      - nfs-common
+    state: present
+    update_cache: true
+  become: true
+
+- name: Ensure backup mount point exists
+  ansible.builtin.file:
+    path: "{{ vm_network_docker_backup_mount }}"
+    state: directory
+    mode: '0755'
+
+- name: Mount NFS backup share
+  ansible.posix.mount:
+    path: "{{ vm_network_docker_backup_mount }}"
+    src: "{{ vm_network_docker_nfs_server }}:{{ vm_network_docker_nfs_export }}"
+    fstype: nfs
+    opts: defaults
+    state: mounted
+
+- name: Ensure backup directory for this server exists
+  ansible.builtin.file:
+    path: "{{ vm_network_docker_backup_mount }}/servers/{{ ansible_hostname }}"
+    state: directory
+    mode: '0755'
