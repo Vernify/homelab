@@ -40,9 +40,9 @@ def _environ_get_and_map(variable_name: str, default: str | None = None, map_fn:
     
     return map_fn(env_value)
 
-_AS_BOOL = lambda value : value.lower() == 'true'
-_AS_INT = lambda value : int(value)
-_AS_LIST = lambda value : list(filter(None, value.split(' ')))
+_AS_BOOL = lambda value : value.lower() == 'true' if isinstance(value, str) else value
+_AS_INT = lambda value : int(value) if isinstance(value, str) else value
+_AS_LIST = lambda value : list(filter(None, value.split(' '))) if isinstance(value, str) else value
 
 _BASE_DIR = dirname(dirname(abspath(__file__)))
 
@@ -58,7 +58,7 @@ DATABASES = {
         'USER': _environ_get_and_map('DB_USER', 'netbox'),
         'PASSWORD': _environ_get_and_map('DB_PASSWORD', ''),
         'HOST': _environ_get_and_map('DB_HOST', 'localhost'),
-        'PORT': _environ_get_and_map('DB_PORT', '', _AS_INT),
+        'PORT': _environ_get_and_map('DB_PORT', ''),
         'CONN_MAX_AGE': _environ_get_and_map('DB_CONN_MAX_AGE', 300, _AS_INT),
         'ENGINE': 'django.db.backends.postgresql',
     }
@@ -179,9 +179,3 @@ CORS_ORIGIN_ALLOW_ALL = _environ_get_and_map('CORS_ORIGIN_ALLOW_ALL', True, _AS_
 SKIP_SUPERUSER = _environ_get_and_map('SKIP_SUPERUSER', False, _AS_BOOL)
 
 TIME_ZONE = _environ_get_and_map('TZ', 'UTC')
-
-#########################
-# Override defaults
-#########################
-
-from netbox.configuration_example import *

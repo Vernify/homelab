@@ -1,0 +1,49 @@
+---
+- name: Deploy Netbox backup/restore script
+  ansible.builtin.template:
+    src: netbox-backup-restore.sh.j2
+    dest: /opt/netbox/backup-restore.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Create cron job for daily Netbox backup at 10pm
+  ansible.builtin.cron:
+    name: "Netbox backup at 10pm"
+    minute: "0"
+    hour: "22"
+    job: "/opt/netbox/backup-restore.sh backup"
+    user: root
+    cron_file: netbox-backup
+- name: Deploy UniFi backup script
+  ansible.builtin.template:
+    src: unifi-backup.sh.j2
+    dest: /opt/unifi/backup.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Create cron job for daily UniFi backup at 11pm
+  ansible.builtin.cron:
+    name: "UniFi backup at 11pm"
+    minute: "0"
+    hour: "23"
+    job: "/opt/unifi/backup.sh"
+    user: root
+    cron_file: unifi-backup
+
+- name: Deploy logrotate config for Netbox backup logs
+  ansible.builtin.template:
+    src: logrotate-netbox-backup.j2
+    dest: /etc/logrotate.d/network-docker-backup
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Deploy logrotate config for UniFi backup logs
+  ansible.builtin.template:
+    src: logrotate-unifi-backup.j2
+    dest: /etc/logrotate.d/unifi-backup
+    owner: root
+    group: root
+    mode: '0644'

@@ -29,6 +29,24 @@ cd ../ansible
 ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml
 ```
 
+## Configure the devices if required:
+```bash
+ssh admin@192.168.1.106 'mca-cli-op set-inform http://192.168.22.5:8080/inform'
+```
+
+To verify the device is connected:
+```bash
+ssh admin@192.168.1.106 'mca-cli-op info'
+# Should show: Status: Connected (http://192.168.22.5:8080/inform)
+```
+
+If you need to debug, ssh into the server and run the command from there:
+
+```bash
+ssh admin@192.168.1.106
+set-inform http://192.168.22.5:8080/inform
+```
+
 ## Notes
 
 - State files (*.tfstate) are local; consider using remote backend for team deployments

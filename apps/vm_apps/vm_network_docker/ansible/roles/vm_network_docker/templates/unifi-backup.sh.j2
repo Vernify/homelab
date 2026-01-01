@@ -1,0 +1,44 @@
+#!/bin/bash
+# UniFi Network Application Backup Script
+# Backs up UniFi configuration and backup data from Docker volume
+
+set -euo pipefail
+
+BACKUP_DIR="/backup/servers/{{ inventory_hostname }}"
+UNIFI_BACKUP_PATH="/var/lib/docker/volumes/unifi_unifi-app/_data/data/backup"
+RETENTION_DAYS={{ vm_network_docker_unifi_backup_retention | default(3) }}
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="${BACKUP_DIR}/unifi-backup-${TIMESTAMP}.tar.gz"
+LOG_FILE="/var/log/unifi-backup.log"
+
+# Ensure backup directory exists
+mkdir -p "${BACKUP_DIR}"
+
+{
+  echo "[$(date)] Starting UniFi backup..."
+  
+  # Check if backup source exists
+  if [ ! -d "${UNIFI_BACKUP_PATH}" ]; then
+    echo "[$(date)] ERROR: UniFi backup path not found: ${UNIFI_BACKUP_PATH}"
+    exit 1
+  fi
+  
+  # Create backup tarball
+  echo "[$(date)] Creating tarball: ${BACKUP_FILE}"
+  tar -czf "${BACKUP_FILE}" -C "/var/lib/docker/volumes/unifi_unifi-app/_data/data" backup/
+  
+  if [ -f "${BACKUP_FILE}" ]; then
+    SIZE=$(du -sh "${BACKUP_FILE}" | cut -f1)
+    echo "[$(date)] Backup completed successfully: ${SIZE}"
+    
+    # Cleanup old backups (retention policy)
+    echo "[$(date)] Cleaning up backups older than ${RETENTION_DAYS} days..."
+    find "${BACKUP_DIR}" -name "unifi-backup-*.tar.gz" -type f -mtime +${RETENTION_DAYS} -delete
+    echo "[$(date)] Cleanup completed"
+  else
+    echo "[$(date)] ERROR: Backup file was not created"
+    exit 1
+  fi
+  
+  echo "[$(date)] UniFi backup completed successfully"
+} | tee -a "${LOG_FILE}"

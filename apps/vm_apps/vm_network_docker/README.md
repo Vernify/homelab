@@ -9,18 +9,24 @@ This VM hosts network-related Docker containers including UniFi Network Applicat
 cd terraform
 terraform apply
 
-# 2. Configure VM with Ansible
+# 2. Configure VM with Ansible (automatically restores from latest backup if fresh install)
 cd ../ansible
 ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml
 ```
 
-## Infrastructure
+## Automated Rebuilds
 
-- **Proxmox Host**: pve08
-- **VM ID**: 2205
-- **IP Address**: 192.168.22.5
-- **Storage**: OS disk + `/dev/vdb` (Docker data volume)
+The Ansible playbook is fully idempotent and rebuild-safe:
 
+- **Fresh Install Detection**: Automatically detects if `/var/lib/docker/volumes` is empty
+- **Auto-Restore**: If backups exist and volumes are empty, restores latest backup automatically
+- **Non-Destructive**: Never overwrites existing data - safe to run on production systems
+- **NFS Mount**: Backup share mounted early in playbook for restore availability
+
+To disable auto-restore, set in `defaults/main.yml`:
+```yaml
+vm_network_docker_auto_restore: false
+```
 ## Services
 
 ### UniFi Network Application
@@ -68,29 +74,55 @@ All persistent container data is stored in Docker named volumes on the dedicated
 
 **Reprovisioning Strategy**: 
 
-All service configurations are managed by Ansible templates and stored in version control (repo). Only persistent data in Docker volumes needs backing up.
+All service configurations are managed by Ansible templates. Backups are automated via NFS mount to backup server. Rebuilds are fully automated.
 
-**Single backup requirement**:
+**Automated Backup System**:
 ```bash
-# Backup Docker volumes (contains all service data)
-sudo tar czf /backup/network-docker-volumes-$(date +%Y%m%d).tar.gz -C /var/lib/docker volumes/
+# Run backup (deployed by Ansible at /usr/local/bin/network-docker-backup.sh)
+sudo network-docker-backup.sh
+
+# Backups stored at: /backup/servers/$(hostname)/network-docker-*.tar.gz
+# Retention: Last 3 days (automatic cleanup after successful backup)
 ```
 
-**Reprovisioning workflow**:
-1. Restore Docker volumes from backup:
-   ```bash
-   sudo tar xzf /backup/network-docker-volumes-YYYYMMDD.tar.gz -C /var/lib/docker
-   ```
-2. Run Ansible playbook (redeploys all configs from templates):
-   ```bash
-   ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml
-   ```
+**Automated Rebuild Process**:
+1. Provision fresh VM with Terraform
+2. Run Ansible playbook - it will:
+   - Mount NFS backup share
+   - Detect fresh install (no Docker volumes)
+   - Automatically restore latest backup
+   - Deploy all configurations
+   - Start services
 
-This approach ensures:
+```bash
+terraform apply
+cd ../ansible
+ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml
+# System fully restored and operational!
+```
+
+**Manual Restore** (if needed):
+```bash
+# Interactive mode (lists available backups)
+sudo network-docker-restore.sh
+
+# Or specify backup file directly
+sudo network-docker-restore.sh /backup/servers/network-docker/network-docker-network-docker-20260101_120000.tar.gz
+```
+
+**What's backed up**:
+- ✅ All Docker volumes (UniFi, Netbox databases, media, configs)
+- ✅ Container states and network information
+- ✅ Compose files and configurations
+
+**Benefits**:
 - ✅ All configurations are version-controlled and reproducible
-- ✅ Only large data volumes need backing up (PostgreSQL, MongoDB, UniFi data)
-- ✅ No secrets or config files loose in backups
-- ✅ Single restore point (volumes backup) covers all data
+- ✅ Automated backups to NFS server with retention
+- ✅ Fully automated rebuild process (no manual restore needed)
+- ✅ Idempotent - safe to run on existing systems
+- ✅ Zero-touch disaster recovery
+- ✅ Complete system state captured in each backup
+- ✅ Simple one-command restore process
 
 ## Deployment
 
@@ -167,6 +199,35 @@ ls -la /var/lib/docker.old
 
 ## Maintenance
 
+### Backups
+
+**Run manual backup**:
+```bash
+sudo network-docker-backup.sh
+```
+
+**List available backups**:
+```bash
+ls -lh /backup/servers/$(hostname)/
+```
+
+**Restore from backup**:
+```bash
+# Interactive mode
+sudo network-docker-restore.sh
+
+# Or use latest backup directly
+sudo network-docker-restore.sh latest
+```
+
+**Backup details**:
+- Location: `/backup/servers/$(hostname)/` (NFS mount from 192.168.50.211)
+- Retention: 3 days (automatic cleanup)
+- Contents: Docker volumes, container states, compose files
+- Log: `/var/log/network-docker-backup.log`
+
+### Service Updates
+
 **Update UniFi**:
 ```bash
 cd /opt/unifi
@@ -174,21 +235,16 @@ sudo docker compose pull
 sudo docker compose up -d
 ```
 
-**Backup UniFi data**:
+**Update Netbox**:
 ```bash
-# Data is in Docker volume: unifi_unifi-app
-sudo docker run --rm -v unifi_unifi-app:/data -v $(pwd):/backup ubuntu tar czf /backup/unifi-backup-$(date +%Y%m%d).tar.gz /data
+cd /opt/netbox
+sudo docker compose pull
+sudo docker compose up -d
 ```
 
-**Restore UniFi data**:
+**Update all services**:
 ```bash
-# Stop UniFi
-cd /opt/unifi
-sudo docker compose down
-
-# Restore from backup
-sudo docker run --rm -v unifi_unifi-app:/data -v $(pwd):/backup ubuntu tar xzf /backup/unifi-backup-YYYYMMDD.tar.gz -C /
-
-# Start UniFi
-sudo docker compose up -d
+# Re-run Ansible playbook to update configs and restart services
+cd ansible
+ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml
 ```
