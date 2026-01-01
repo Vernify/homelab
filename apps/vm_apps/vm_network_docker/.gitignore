@@ -1,0 +1,24 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+*.tfplan
+*.auto.tfvars
+credentials.auto.tfvars
+
+# Ansible
+vault-pass.txt
+.ansible/plugins/
+.ansible/tmp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local overrides
+local.auto.tfvars

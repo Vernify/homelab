@@ -1,16 +1,25 @@
 # Network Docker VM
 
-This VM hosts network-related Docker containers including UniFi Network Application.
+This VM hosts network-related Docker containers including UniFi Network Application and Netbox.
+
+## Quick Start
+
+```bash
+# 1. Provision infrastructure with Terraform
+cd terraform
+terraform apply
+
+# 2. Configure VM with Ansible
+cd ../ansible
+ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml
+```
 
 ## Infrastructure
 
 - **Proxmox Host**: pve08
 - **VM ID**: 2205
 - **IP Address**: 192.168.22.5
-- **OS**: Ubuntu/Debian
-- **Storage**: 
-  - OS: Default disk
-  - Docker data: `/dev/vdb` mounted at `/var/lib/docker`
+- **Storage**: OS disk + `/dev/vdb` (Docker data volume)
 
 ## Services
 
