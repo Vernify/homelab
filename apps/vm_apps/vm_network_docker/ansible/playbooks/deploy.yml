@@ -1,0 +1,5 @@
+- name: Deploy network-docker services
+  hosts: network-docker
+  become: true
+  roles:
+    - vm_network_docker

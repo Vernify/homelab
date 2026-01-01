@@ -1,0 +1,187 @@
+####
+## Netbox configuration - Managed by Ansible
+## Do not edit directly - changes will be overwritten
+####
+
+import re
+from os import environ
+from os.path import abspath, dirname, join
+from typing import Any, Callable, Tuple
+
+# For reference see https://docs.netbox.dev/en/stable/configuration/
+# Based on https://github.com/netbox-community/netbox/blob/develop/netbox/netbox/configuration_example.py
+
+###
+# NetBox-Docker Helper functions
+###
+
+# Read secret from file
+def _read_secret(secret_name: str, default: str | None = None) -> str | None:
+    try:
+        f = open('/run/secrets/' + secret_name, 'r', encoding='utf-8')
+    except EnvironmentError:
+        return default
+    else:
+        with f:
+            return f.readline().strip()
+
+# If the `map_fn` isn't defined, then the value that is read from the environment (or the default value if not found) is returned.
+# If the `map_fn` is defined, then `map_fn` is invoked and the value (that was read from the environment or the default value if not found)
+# is passed to it as a parameter. The value returned from `map_fn` is then the return value of this function.
+# The `map_fn` is not invoked, if the value (that was read from the environment or the default value if not found) is None.
+def _environ_get_and_map(variable_name: str, default: str | None = None, map_fn: Callable[[str], Any | None] = None) -> Any | None:
+    env_value = environ.get(variable_name, default)
+
+    if env_value == None:
+        return env_value
+
+    if not map_fn:
+        return env_value
+    
+    return map_fn(env_value)
+
+_AS_BOOL = lambda value : value.lower() == 'true'
+_AS_INT = lambda value : int(value)
+_AS_LIST = lambda value : list(filter(None, value.split(' ')))
+
+_BASE_DIR = dirname(dirname(abspath(__file__)))
+
+#########################
+# Core Configuration
+#########################
+
+ALLOWED_HOSTS = _environ_get_and_map('ALLOWED_HOSTS', '*', _AS_LIST)
+
+DATABASES = {
+    'default': {
+        'NAME': _environ_get_and_map('DB_NAME', 'netbox'),
+        'USER': _environ_get_and_map('DB_USER', 'netbox'),
+        'PASSWORD': _environ_get_and_map('DB_PASSWORD', ''),
+        'HOST': _environ_get_and_map('DB_HOST', 'localhost'),
+        'PORT': _environ_get_and_map('DB_PORT', '', _AS_INT),
+        'CONN_MAX_AGE': _environ_get_and_map('DB_CONN_MAX_AGE', 300, _AS_INT),
+        'ENGINE': 'django.db.backends.postgresql',
+    }
+}
+
+SECRET_KEY = _environ_get_and_map('SECRET_KEY', '')
+
+#########################
+# Redis
+#########################
+
+RQ_SHOW_ADMIN_LINK = True
+
+REDIS = {
+    'tasks': {
+        'HOST': _environ_get_and_map('REDIS_HOST', 'localhost'),
+        'PORT': _environ_get_and_map('REDIS_PORT', 6379, _AS_INT),
+        'PASSWORD': _environ_get_and_map('REDIS_PASSWORD', ''),
+        'DATABASE': _environ_get_and_map('REDIS_DATABASE', 0, _AS_INT),
+        'SSL': _environ_get_and_map('REDIS_SSL', False, _AS_BOOL),
+        'INSECURE_SKIP_TLS_VERIFY': _environ_get_and_map('REDIS_INSECURE_SKIP_TLS_VERIFY', False, _AS_BOOL),
+    },
+    'caching': {
+        'HOST': _environ_get_and_map('REDIS_CACHE_HOST', 'localhost'),
+        'PORT': _environ_get_and_map('REDIS_CACHE_PORT', 6379, _AS_INT),
+        'PASSWORD': _environ_get_and_map('REDIS_CACHE_PASSWORD', ''),
+        'DATABASE': _environ_get_and_map('REDIS_CACHE_DATABASE', 1, _AS_INT),
+        'SSL': _environ_get_and_map('REDIS_CACHE_SSL', False, _AS_BOOL),
+        'INSECURE_SKIP_TLS_VERIFY': _environ_get_and_map('REDIS_CACHE_INSECURE_SKIP_TLS_VERIFY', False, _AS_BOOL),
+    }
+}
+
+#########################
+# Celery
+#########################
+
+TASKS = {
+    'graphql_update_graphs': {
+        'task': 'netbox.graphql.tasks.update_graphs',
+        'schedule': 3600,
+    },
+    'check_releases': {
+        'task': 'netbox.core.tasks.check_releases',
+        'schedule': 86400,
+    }
+}
+
+#########################
+# Email
+#########################
+
+EMAIL = {
+    'SERVER': _environ_get_and_map('EMAIL_SERVER', 'localhost'),
+    'PORT': _environ_get_and_map('EMAIL_PORT', 25, _AS_INT),
+    'USERNAME': _environ_get_and_map('EMAIL_USERNAME', ''),
+    'PASSWORD': _environ_get_and_map('EMAIL_PASSWORD', ''),
+    'USE_SSL': _environ_get_and_map('EMAIL_USE_SSL', False, _AS_BOOL),
+    'USE_TLS': _environ_get_and_map('EMAIL_USE_TLS', False, _AS_BOOL),
+    'TIMEOUT': _environ_get_and_map('EMAIL_TIMEOUT', 10, _AS_INT),
+    'FROM_EMAIL': _environ_get_and_map('EMAIL_FROM', ''),
+}
+
+#########################
+# Misc
+#########################
+
+DEVELOPER = _environ_get_and_map('DEVELOPER', False, _AS_BOOL)
+
+GRAPHQL_ENABLED = _environ_get_and_map('GRAPHQL_ENABLED', True, _AS_BOOL)
+
+HOUSEKEEPING_INTERVAL = _environ_get_and_map('HOUSEKEEPING_INTERVAL', 86400, _AS_INT)
+
+LOGGING = {
+    'disable_existing_loggers': False,
+    'version': 1,
+    'formatters': {
+        'normal': {
+            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s',
+            'datefmt': '%H:%M:%S',
+        },
+        'verbose': {
+            'format': '%(asctime)s.%(msecs)03d %(levelname)-7s %(filename)s:%(funcName)s():%(lineno)d %(name)s :\n  %(message)s',
+            'datefmt': '%H:%M:%S',
+        },
+    },
+    'handlers': {
+        'normal_console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'normal'
+        },
+        'verbose_console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['normal_console'],
+            'level': 'INFO',
+        },
+        'netbox': {
+            'handlers': ['normal_console'],
+            'level': 'INFO',
+        },
+    },
+}
+
+METRICS_ENABLED = _environ_get_and_map('METRICS_ENABLED', False, _AS_BOOL)
+
+RELEASE_CHECK_URL = _environ_get_and_map('RELEASE_CHECK_URL', None)
+
+WEBHOOKS_ENABLED = _environ_get_and_map('WEBHOOKS_ENABLED', True, _AS_BOOL)
+
+CORS_ORIGIN_ALLOW_ALL = _environ_get_and_map('CORS_ORIGIN_ALLOW_ALL', True, _AS_BOOL)
+
+SKIP_SUPERUSER = _environ_get_and_map('SKIP_SUPERUSER', False, _AS_BOOL)
+
+TIME_ZONE = _environ_get_and_map('TZ', 'UTC')
+
+#########################
+# Override defaults
+#########################
+
+from netbox.configuration_example import *

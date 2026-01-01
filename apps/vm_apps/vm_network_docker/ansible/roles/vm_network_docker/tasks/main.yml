@@ -1,0 +1,189 @@
+---
+- name: Show remote hostname (safe, no changes)
+  ansible.builtin.debug:
+    msg: "Remote host: {{ ansible_hostname }}"
+
+- name: Check whether docker data is already on target device
+  ansible.builtin.set_fact:
+    vm_network_docker_docker_mount: "{{ (ansible_mounts | selectattr('mount', 'equalto', vm_network_docker_data_dir) | list) | first | default({}) }}"
+
+- name: Debug migration status
+  ansible.builtin.debug:
+    msg: "vm_network_docker_already_migrated={{ vm_network_docker_already_migrated }}"
+
+- name: Wait for new disk to appear
+  ansible.builtin.wait_for:
+    path: "{{ vm_network_docker_new_disk }}"
+    state: present
+    timeout: 300
+  when: not vm_network_docker_already_migrated
+
+- name: Check whether filesystem exists on device
+  ansible.builtin.command:
+    cmd: "blkid -s TYPE -o value {{ vm_network_docker_new_disk }}"
+  register: vm_network_docker_blkid
+  failed_when: false
+  changed_when: false
+  when: not vm_network_docker_already_migrated
+
+- name: Create filesystem on new disk if missing
+  community.general.filesystem:
+    fstype: "{{ vm_network_docker_fs_type }}"
+    dev: "{{ vm_network_docker_new_disk }}"
+    force: false
+  when:
+    - not vm_network_docker_already_migrated
+    - vm_network_docker_blkid.rc != 0
+
+- name: Create temporary mount point
+  ansible.builtin.file:
+    path: "{{ vm_network_docker_tmp_mount }}"
+    state: directory
+    mode: '0755'
+  when: not vm_network_docker_already_migrated
+
+- name: Mount new disk to temporary location
+  ansible.posix.mount:
+    path: "{{ vm_network_docker_tmp_mount }}"
+    src: "{{ vm_network_docker_new_disk }}"
+    fstype: "{{ vm_network_docker_fs_type }}"
+    state: mounted
+  when: not vm_network_docker_already_migrated
+
+- name: Synchronize docker data to new disk
+  ansible.builtin.command:
+    cmd: "rsync -aHAX --delete {{ vm_network_docker_data_dir }}/ {{ vm_network_docker_tmp_mount }}/"
+  register: vm_network_docker_sync
+  changed_when: vm_network_docker_sync.rc == 0
+  when: not vm_network_docker_already_migrated
+
+- name: Stop docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: stopped
+  when: not vm_network_docker_already_migrated
+
+- name: Backup old docker data
+  ansible.builtin.command:
+    cmd: "mv {{ vm_network_docker_data_dir }} {{ vm_network_docker_backup_dir }}"
+  args:
+    removes: "{{ vm_network_docker_data_dir }}"
+  register: vm_network_docker_backup
+  changed_when: vm_network_docker_backup.rc == 0
+  when: not vm_network_docker_already_migrated
+
+- name: Create docker data dir mountpoint
+  ansible.builtin.file:
+    path: "{{ vm_network_docker_data_dir }}"
+    state: directory
+    mode: '0755'
+  when: not vm_network_docker_already_migrated
+
+- name: Unmount temporary mount
+  ansible.posix.mount:
+    path: "{{ vm_network_docker_tmp_mount }}"
+    state: unmounted
+  when: not vm_network_docker_already_migrated
+
+- name: Mount new disk to docker data dir and add to fstab
+  ansible.posix.mount:
+    path: "{{ vm_network_docker_data_dir }}"
+    src: "{{ vm_network_docker_new_disk }}"
+    fstype: "{{ vm_network_docker_fs_type }}"
+    opts: defaults
+    state: mounted
+    dump: 0
+    passno: 2
+  when: not vm_network_docker_already_migrated
+
+- name: Start docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+  when: not vm_network_docker_already_migrated
+
+- name: Ensure UniFi directory exists
+  ansible.builtin.file:
+    path: /opt/unifi
+    state: directory
+    owner: werner
+    group: werner
+    mode: '0755'
+
+- name: Copy UniFi docker-compose
+  ansible.builtin.template:
+    src: docker-compose.unifi.yml.j2
+    dest: /opt/unifi/docker-compose.yml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure Netbox configuration directory exists
+  ansible.builtin.file:
+    path: /opt/netbox/configuration
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy Netbox configuration.py
+  ansible.builtin.template:
+    src: netbox-configuration.py.j2
+    dest: /opt/netbox/configuration/configuration.py
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure Netbox env directory exists
+  ansible.builtin.file:
+    path: /opt/netbox/env
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Deploy Netbox environment file
+  ansible.builtin.template:
+    src: netbox.env.j2
+    dest: /opt/netbox/env/netbox.env
+    owner: root
+    group: root
+    mode: '0600'
+  notify: Restart Netbox containers
+
+- name: Bring up UniFi stack with docker compose
+  ansible.builtin.command:
+    cmd: docker compose -f /opt/unifi/docker-compose.yml up -d
+  become: true
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  register: vm_network_docker_unifi_compose_result
+  changed_when: "'Started' in vm_network_docker_unifi_compose_result.stderr or 'Created' in vm_network_docker_unifi_compose_result.stderr"
+
+- name: Wait for UniFi system.properties file to be created
+  ansible.builtin.wait_for:
+    path: "{{ vm_network_docker_unifi_data_dir }}/system.properties"
+    state: present
+    timeout: "{{ vm_network_docker_unifi_wait_timeout }}"
+
+- name: Configure UniFi system_ip in system.properties
+  ansible.builtin.lineinfile:
+    path: "{{ vm_network_docker_unifi_data_dir }}/system.properties"
+    regexp: '^system_ip='
+    line: "system_ip={{ vm_network_docker_unifi_system_ip }}"
+    create: false
+    backup: true
+  notify: Restart UniFi container
+
+- name: Ensure UniFi is accessible
+  ansible.builtin.uri:
+    url: "http://{{ vm_network_docker_unifi_system_ip }}:8080/status"
+    method: GET
+    status_code: [200, 302, 404]
+    timeout: 10
+  register: vm_network_docker_unifi_status
+  until: vm_network_docker_unifi_status is succeeded
+  retries: 6
+  delay: 10
+  failed_when: false
+

@@ -1,0 +1,18 @@
+---
+# Handlers for vm_network_docker role
+
+- name: Restart UniFi container
+  ansible.builtin.command:
+    cmd: docker compose -f {{ vm_network_docker_unifi_compose_file }} restart unifi-network-application
+  become: true
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+
+- name: Restart Netbox containers
+  ansible.builtin.command:
+    cmd: docker compose -f /opt/netbox/docker-compose.yml restart
+  become: true
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  args:
+    chdir: /opt/netbox
