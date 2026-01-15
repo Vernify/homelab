@@ -22,6 +22,10 @@ Code reviewed since Aug 2024.
   * Install and configure 2 as K3S nodes
   * Deploy, configure, and deploy MetalLB
 
+## Preferred Data Access
+
+- When building dashboards or UI pages, prefer creating and consuming API endpoints (REST/JSON) to pull data instead of embedding raw SQL or server-side queries directly in templates. This keeps the frontend/backend contract clear, enables caching, simplifies testing, and reduces accidental exposure of database logic. In this repo, place such endpoints under the appropriate app `api/` folder (for example `sites/finance/api/`) and have pages request JSON from them.
+
 # Technologies
 ## Provisioning Platform
 The following makes up my home lab. I'll add the code as I review and refactor them for 2024. 

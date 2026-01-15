@@ -36,7 +36,6 @@
   register: vm_network_docker_current_system_ip
   changed_when: false
   failed_when: false
-
 - name: Configure UniFi system_ip in system.properties (if needed)
   ansible.builtin.shell: |
     sed -i.bak 's/^#*system_ip=.*/system_ip={{ vm_network_docker_unifi_system_ip }}/' {{ vm_network_docker_unifi_data_dir }}/system.properties

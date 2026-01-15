@@ -11,25 +11,67 @@
   tags:
     - always
 
+- name: Ensure Docker network for services
+  ansible.builtin.import_tasks: 02a_create_network.yml
+  tags:
+    - networks
+    - services
+    - home_assistant
+    - nginx
+
 - name: Setup NFS and backup infrastructure
   ansible.builtin.include_tasks: 02_nfs_backup_setup.yml
   tags:
     - always
 
 - name: Deploy Netbox service
-  ansible.builtin.include_tasks: 03_netbox.yml
+  ansible.builtin.import_tasks: 03_netbox.yml
   tags:
     - netbox
     - services
 
 - name: Deploy UniFi service
-  ansible.builtin.include_tasks: 04_unifi.yml
+  ansible.builtin.import_tasks: 04_unifi.yml
   tags:
     - unifi
     - services
 
+- name: Deploy Home Assistant service
+  ansible.builtin.import_tasks: 05_home_assistant.yml
+  tags:
+    - home_assistant
+    - services
+
+- name: Install HACS into Home Assistant config
+  ansible.builtin.import_tasks: 05a_install_hacs.yml
+  tags:
+    - hacs
+
+- name: Install advanced-camera-card and deploy Frigate dashboard
+  ansible.builtin.import_tasks: 05b_frigate_dashboard.yml
+  tags:
+    - frigate_dashboard
+    - hacs
+    - home_assistant
+
+- name: Deploy Mosquitto MQTT broker
+  ansible.builtin.import_tasks: 10_mosquitto.yml
+  tags:
+    - mqtt
+    - mosquitto
+    - services
+
 - name: Deploy backup and restore scripts
-  ansible.builtin.include_tasks: 05_backup_scripts.yml
+  ansible.builtin.import_tasks: 99_backup_scripts.yml
   tags:
     - netbox
+    - unifi
+    - home_assistant
+    - backup
     - scripts
+
+- name: Deploy Nginx reverse-proxy
+  ansible.builtin.import_tasks: 90_nginx.yml
+  tags:
+    - nginx
+    - services
